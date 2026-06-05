@@ -1052,7 +1052,7 @@ def flex_open(pair_no, note=None):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#6B7280",
+                        "backgroundColor": "#EA580C",
                         "paddingAll": "16px",
                         "contents": [
                             {"type": "text", "text": "🎯 เริ่มแทงได้ 🎯",
@@ -1462,18 +1462,63 @@ def flex_customer_card(st, user):
         }
     )
 def text_bank():
-    return TextSendMessage(
-        text=(
-            "⚠️แจ้งเปลี่ยนเลขบัญชีฝาก⚠️\n\n"
-
-            "📌 บั้งไฟสายฟ้า ⚡\n\n"
-            
-            "🏳️ 1423968792\n"
-            "💰 กสิกรไทย\n"
-            "💳 กิติพร ศักดิ์ศรี\n\n"
-            "📌 เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น⚠️\n"
-            "📌 กด C ดูไอดีตัวเองส่งให้แอดมินได้เลย\n"
-        )
+    return FlexSendMessage(
+        alt_text="แจ้งเลขบัญชีฝากเงิน",
+        contents={
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "0px",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": "#EA580C",
+                        "paddingAll": "14px",
+                        "contents": [
+                            {"type": "text", "text": "🏦 แจ้งเลขบัญชีฝากเงิน 🏦",
+                             "weight": "bold", "size": "lg", "align": "center", "color": "#FFFFFF"},
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "💎 6787309325",
+                             "weight": "bold", "size": "md", "color": "#111827"},
+                            {"type": "text", "text": "💎 กรุงไทย",
+                             "size": "sm", "color": "#374151"},
+                            {"type": "text", "text": "💎 ธนาวุฒิ แสวงศรี",
+                             "size": "sm", "color": "#374151"},
+                            {"type": "separator", "margin": "md", "color": "#E5E7EB"},
+                            {"type": "text",
+                             "text": "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น",
+                             "size": "xs", "color": "#EF4444", "wrap": True},
+                            {"type": "text",
+                             "text": "📌 กด C ดูไอดีตัวเองส่งให้แอดมินได้เลย",
+                             "size": "xs", "color": "#6B7280", "wrap": True, "margin": "xs"},
+                            {"type": "separator", "margin": "md", "color": "#E5E7EB"},
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "color": "#16A34A",
+                                "height": "sm",
+                                "margin": "md",
+                                "action": {
+                                    "type": "uri",
+                                    "label": "กดเข้าหลังบ้าน",
+                                    "uri": DEPOSIT_URL
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
     )
 
 
@@ -1626,7 +1671,7 @@ def flex_result_preview(code: str, pair_no: int):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#0F172A",
+                        "backgroundColor": "#F3F4F6",
                         "paddingAll": "16px",
                         "spacing": "12px",
                         "contents": [
@@ -1769,9 +1814,9 @@ def flex_settle(pair_no, rows, footer_text,
 
     # --- 2. ส่วนรายการผู้เล่น (Body) ---
     header_cols = [
-        {"type": "text", "text": "ผู้เล่น",  "flex": 4, "size": "xs", "weight": "bold", "color": "#6B7280"},
-        {"type": "text", "text": "ยอดเล่น", "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#6B7280"},
-        {"type": "text", "text": "ได้เสีย",  "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#6B7280"},
+        {"type": "text", "text": "ผู้เล่น",  "flex": 4, "size": "xs", "weight": "bold", "color": "#374151"},
+        {"type": "text", "text": "ยอดเล่น", "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#374151"},
+        {"type": "text", "text": "ได้เสีย",  "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#374151"},
     ]
     if has_balance:
         header_cols.append({"type": "text", "text": "คงเหลือ", "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#6B7280"})
@@ -1891,9 +1936,9 @@ def flex_scoreboard(history_list):
         "layout": "horizontal",
         "paddingBottom": "10px",
         "contents": [
-            {"type": "text", "text": "#", "flex": 1, "size": "xs", "color": "#6B7280", "align": "center"},
-            {"type": "text", "text": "ชื่อค่าย ", "flex": 3, "size": "xs", "color": "#6B7280", "offsetStart": "10px"},
-            {"type": "text", "text": "ผล ", "flex": 4, "size": "xs", "align": "center", "color": "#6B7280"},
+            {"type": "text", "text": "#", "flex": 1, "size": "xs", "color": "#374151", "align": "center"},
+            {"type": "text", "text": "ชื่อค่าย ", "flex": 3, "size": "xs", "color": "#374151", "offsetStart": "10px"},
+            {"type": "text", "text": "ผล ", "flex": 4, "size": "xs", "align": "center", "color": "#374151"},
         ]
     })
 
@@ -1920,7 +1965,7 @@ def flex_scoreboard(history_list):
                     "text": str(item['round']),
                     "flex": 1,
                     "size": "xs",
-                    "color": "#9CA3AF",
+                    "color": "#6B7280",
                     "align": "center"
                 },
                 {
@@ -1928,7 +1973,7 @@ def flex_scoreboard(history_list):
                     "text": camp_name,
                     "flex": 3,
                     "size": "sm",
-                    "color": "#E5E7EB",
+                    "color": "#111827",
                     "wrap": False,
                     "offsetStart": "10px"
                 },
@@ -1946,7 +1991,7 @@ def flex_scoreboard(history_list):
         })
 
         if idx < len(recent) - 1:
-            rows.append({"type": "separator", "color": "#1F2937", "margin": "none"})
+            rows.append({"type": "separator", "color": "#E5E7EB", "margin": "none"})
 
     return FlexSendMessage(
         alt_text="สกอบั้งไฟล่าสุด",
@@ -1954,8 +1999,8 @@ def flex_scoreboard(history_list):
             "type": "bubble",
             "size": "mega",
             "styles": {
-                "header": {"backgroundColor": "#111827"},
-                "body": {"backgroundColor": "#111827"}
+                "header": {"backgroundColor": "#FFFFFF"},
+                "body": {"backgroundColor": "#FFFFFF"}
             },
             "header": {
                 "type": "box",
@@ -1967,7 +2012,7 @@ def flex_scoreboard(history_list):
                         "text": "📜 สกอบั้งไฟ",
                         "weight": "bold",
                         "size": "lg",
-                        "color": "#FBBF24",
+                        "color": "#111827",
                         "align": "center"
                     }
                 ]
@@ -1980,7 +2025,7 @@ def flex_scoreboard(history_list):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#1F2937",
+                        "backgroundColor": "#F9FAFB",
                         "cornerRadius": "10px",
                         "paddingAll": "12px",
                         "contents": rows if rows else [
@@ -2085,16 +2130,16 @@ def flex_call_pages(user_rows, title="ตารางเครดิตลูก
             "paddingAll": "6px",
             "contents": [
                 {"type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": "ลูกค้าในหน้านี้", "flex": 6, "size": "xs", "color": "#6B7280"},
+                    {"type": "text", "text": "ลูกค้าในหน้านี้", "flex": 6, "size": "xs", "color": "#374151"},
                     {"type": "text", "text": str(len(chunk)), "flex": 6, "size": "xs", "align": "end"},
                 ]},
                 {"type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": "รวมเครดิต (หน้านี้)", "flex": 6, "size": "xs", "color": "#6B7280"},
+                    {"type": "text", "text": "รวมเครดิต (หน้านี้)", "flex": 6, "size": "xs", "color": "#374151"},
                     {"type": "text", "text": fmt2(page_credit), "flex": 6, "size": "xs", "align": "end", "color": "#16A34A"},
                 ]},
                 {"type": "separator", "margin": "md"},
                 {"type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": "รวมเครดิต (ทั้งหมด)", "flex": 6, "size": "xs", "color": "#6B7280"},
+                    {"type": "text", "text": "รวมเครดิต (ทั้งหมด)", "flex": 6, "size": "xs", "color": "#374151"},
                     {"type": "text", "text": fmt2(sum_credit_all), "flex": 6, "size": "xs", "align": "end", "color": "#16A34A"},
                 ]}
             ]
@@ -2625,16 +2670,16 @@ def flex_summary(st, event=None):
         # ===== หัวตาราง =====
         rows.append({
             "type": "box", "layout": "horizontal", "contents": [
-                {"type": "text", "text": "👤 ผู้เล่น", "flex": 5, "size": "sm", "weight": "bold", "color": "#F9FAFB"},
-                {"type": "text", "text": "🚀 สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#F9FAFB"},
+                {"type": "text", "text": "👤 ผู้เล่น", "flex": 5, "size": "sm", "weight": "bold", "color": "#374151"},
+                {"type": "text", "text": "🚀 สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#374151"},
                 {"type": "text", "text": "💰 ยอดเล่น", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#F9FAFB"},
             ]
         })
-        rows.append({"type": "separator", "margin": "sm", "color": "#6B7280"})
+        rows.append({"type": "separator", "margin": "sm", "color": "#E5E7EB"})
 
         # ===== รายการบิล =====
         for i, b in enumerate(bets):
-            bg_color = "#1E293B"   # ใช้สีเดียวทุกแถว
+            bg_color = "#FFFFFF"   # ใช้สีเดียวทุกแถว
             name = b["name"]
             if b["side"] == "HI":
                 side_display = "✅ สูง"
@@ -2655,13 +2700,13 @@ def flex_summary(st, event=None):
                         "cornerRadius": "6px",
                         "paddingAll": "6px",
                         "contents": [
-                            {"type": "text", "text": name, "flex": 5, "size": "sm", "color": "#E5E7EB"},
+                            {"type": "text", "text": name, "flex": 5, "size": "sm", "color": "#111827"},
                             {"type": "text", "text": side_display, "flex": 3, "size": "sm", "align": "center", "color": side_color},
-                            {"type": "text", "text": fmt(b["amount"]), "flex": 3, "size": "sm", "align": "end", "color": "#FACC15"},
+                            {"type": "text", "text": fmt(b["amount"]), "flex": 3, "size": "sm", "align": "end", "color": "#111827"},
                         ]
                     },
                     # ==== เส้นคั่นใต้แต่ละชื่อ ====
-                    {"type": "separator", "color": "#334155", "margin": "xs"}
+                    {"type": "separator", "color": "#E5E7EB", "margin": "xs"}
                 ]
             })
 
@@ -2670,7 +2715,7 @@ def flex_summary(st, event=None):
         alt_text=f"📋 สรุปการแทง คู่ที่ {st['pairNo']}",
         contents={
             "type": "bubble",
-            "styles": {"body": {"backgroundColor": "#111827"}},
+            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
             "body": {
                 "type": "box",
                 "layout": "vertical",
@@ -2695,7 +2740,7 @@ def flex_summary(st, event=None):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#1E293B",
+                        "backgroundColor": "#F9FAFB",
                         "paddingAll": "12px",
                         "spacing": "sm",
                         "contents": rows
@@ -2704,7 +2749,7 @@ def flex_summary(st, event=None):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#0F172A",
+                        "backgroundColor": "#F3F4F6",
                         "paddingAll": "10px",
                         "contents": [
                             {"type": "text",

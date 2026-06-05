@@ -131,10 +131,10 @@ from linebot.models import (
 DEPOSIT_URL = os.getenv("DEPOSIT_URL", "https://page.line.me/957gvogc")
 PROFIT_RATE = float(os.getenv("PROFIT_RATE", "0.95"))   # ชนะหัก 5% = จ่ายสุทธิ 1:0.95
 MIDDLE_FEE  = float(os.getenv("MIDDLE_FEE",  "0.03"))   # หักเมื่อคืนเงิน (กลาง/เสมอแบบหัก)
-MIN_BET         = int(os.getenv("MIN_BET", "30"))
-MAX_BET         = int(os.getenv("MAX_BET", "5000"))
-USER_SIDE_CAP = {"HI": 40000, "LO": 20000}
-SIDE_CAP      = {"HI": 40000, "LO": 20000}
+MIN_BET = int(os.getenv("MIN_BET", "30"))
+MAX_BET = int(os.getenv("MAX_BET", "10000"))
+USER_SIDE_CAP = {"HI": 10000, "LO": 10000}
+SIDE_CAP      = {"HI": 50000, "LO": 30000}
 ROUND_CAP     = 80000
 
 # ====== SIMPLE PER-USER COOLDOWN (anti-spam reply gap) ======
@@ -828,7 +828,7 @@ def start_state():
         "pairNo": 0,
         "note": None,
         "pendingCode": None,
-        "totals": {"HI": 40000, "LO": 20000},
+        "totals": {"HI": 0, "LO": 0},
         "bet_index": {},  # uid -> {uid,name,side,amount}
         "funds": {},      # uid -> ทุนรอบนี้
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
@@ -842,7 +842,7 @@ def start_state():
         "pairNo": 0,
         "note": None,
         "pendingCode": None,
-        "totals": {"HI": 40000, "LO": 20000},
+        "totals": {"HI": 0, "LO": 0},
         "bet_index": {},  
         "funds": {},      
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
@@ -1127,7 +1127,7 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
             "contents": [
                 {"type": "text", "text": "🟢 ไล่ (สูง)",
                  "weight": "bold", "size": "md", "flex": 4, "color": "#16A34A"},
-                {"type": "text", "text": f"{hi_txt} วินาที",
+                {"type": "text", "text": f"{hi_txt} บ.",
                  "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
             ]
         })
@@ -1147,7 +1147,7 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
             "contents": [
                 {"type": "text", "text": "🔴 ยั้ง (ต่ำ)",
                  "weight": "bold", "size": "md", "flex": 4, "color": "#EF4444"},
-                {"type": "text", "text": f"{lo_txt} วินาที",
+                {"type": "text", "text": f"{lo_txt} บ.",
                  "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
             ]
         })
@@ -1181,7 +1181,7 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#EA580C",
+                        "backgroundColor": "#16A34A",
                         "paddingAll": "12px",
                         "contents": [
                             {"type": "text", "text": "🎯 ราคามาแล้วว!! 🎯",
@@ -3475,7 +3475,7 @@ def on_message(event: MessageEvent):
                 # ข้าม pairNo ที่ถูก settle ไปแล้ว กันรอบซ้ำหลัง rollback
                 while has_round_action("settle", key, st["pairNo"]):
                     st["pairNo"] += 1
-                st["totals"] = {"HI": 40000, "LO": 20000}
+                st["totals"] = {"HI": 0, "LO": 0}
                 st["bet_index"] = {}
                 st["pendingCode"] = None
                 st["escrow"] = {}
@@ -3493,7 +3493,7 @@ def on_message(event: MessageEvent):
                 # ข้าม pairNo ที่ถูก settle ไปแล้ว กันรอบซ้ำหลัง rollback
                 while has_round_action("settle", key, st["pairNo"]):
                     st["pairNo"] += 1
-                st["totals"] = {"HI": 40000, "LO": 20000}
+                st["totals"] = {"HI": 0, "LO": 0}
                 st["bet_index"] = {}
                 st["pendingCode"] = None
                 st["escrow"] = {}
@@ -3689,7 +3689,7 @@ def on_message(event: MessageEvent):
             st["phase"] = "NONE"
             st["pendingCode"] = None
             st["bet_index"].clear()
-            st["totals"] = {"HI": 40000, "LO": 20000}
+            st["totals"] = {"HI": 0, "LO": 0}
             st["escrow"].clear()
 
             # ถ้ารอบนี้เคยถูกย้อนแล้ว และตอนนี้ออกผลใหม่สำเร็จแล้ว
@@ -3959,7 +3959,7 @@ def on_message(event: MessageEvent):
                             users[tuid]["credit"] = users[tuid].get("credit", 0) + esc_amt
                     st["escrow"].clear()
                     st["bet_index"].clear()
-                    st["totals"] = {"HI": 40000, "LO": 20000}
+                    st["totals"] = {"HI": 0, "LO": 0}
                     save_users_persist()
                 extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
                 safe_reply(event, TextSendMessage(f"ยกเลิกบิลทั้งหมดสำเร็จ{extra} ({n} บิล)")); return

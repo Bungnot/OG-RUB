@@ -151,8 +151,8 @@ MIDDLE_FEE  = float(os.getenv("MIDDLE_FEE",  "0.03"))   # หักเมื่�
 MIN_BET = int(os.getenv("MIN_BET", "30"))
 MAX_BET = int(os.getenv("MAX_BET", "5000"))
 USER_SIDE_CAP = {"HI": 5000, "LO": 5000}
-SIDE_CAP      = {"HI": 40000, "LO": 30000}
-ROUND_CAP     = 70000
+SIDE_CAP      = {"HI": 30000, "LO": 30000}
+ROUND_CAP     = 60000
 
 # ====== SIMPLE PER-USER COOLDOWN (anti-spam reply gap) ======
 REPLY_COOLDOWN_SEC = int(os.getenv("REPLY_COOLDOWN_SEC", "6"))
@@ -868,7 +868,6 @@ def start_state():
         "bet_index": {},  
         "funds": {},      
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
-        "disabled_sides": set(),
         "escrow": {},
         "score_history": [],  # เก็บประวัติผลสกอบั้งไฟวันนี้
         "settling": False,
@@ -923,11 +922,6 @@ def can_bet(state, uid, side, amount):
     """
     if state["phase"] != "OPEN":
         return (False, "ยังไม่เปิดรอบ", None)
-
-    disabled = state.get("disabled_sides", set())
-    if side in disabled:
-        side_th = "สูง" if side == "HI" else "ต่ำ"
-        return (False, f"❌ ฝั่ง{side_th} ไม่รับแทงในรอบนี้", None)
 
     existing = get_user_bet(state, uid)
     if existing:
@@ -1928,14 +1922,40 @@ def flex_scoreboard(history_list):
                     "wrap": False,
                 },
                 {
-                    "type": "text",
-                    "text": f"{style['label']}{style.get('emoji', '')}",
+                    "type": "box",
+                    "layout": "horizontal",
                     "flex": 3,
-                    "size": "sm",
-                    "color": style["bg"],
-                    "weight": "bold",
-                    "align": "center",
-                    "wrap": False,
+                    "alignItems": "center",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "backgroundColor": style["bg"],
+                            "cornerRadius": "20px",
+                            "paddingTop": "4px",
+                            "paddingBottom": "4px",
+                            "paddingStart": "10px",
+                            "paddingEnd": "10px",
+                            "alignItems": "center",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": style["label"],
+                                    "size": "xs",
+                                    "color": style["tc"],
+                                    "weight": "bold",
+                                    "align": "center",
+                                    "wrap": False,
+                                }
+                            ]
+                        },
+                        {
+                            "type": "text",
+                            "text": style.get("emoji", ""),
+                            "size": "sm",
+                            "margin": "sm",
+                        }
+                    ]
                 }
             ]
         })
@@ -2586,17 +2606,17 @@ def flex_register_success(cid: int):
         alt_text="ลงทะเบียนสำเร็จ",
         contents={
             "type": "bubble",
-            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingAll": "16px",
+                "paddingAll": "10px",
+                "backgroundColor": "#111827",
+                "cornerRadius": "12px",
                 "spacing": "sm",
                 "contents": [
-                    {"type": "text", "text": "✅ ลงทะเบียนสำเร็จ", "weight": "bold", "size": "lg", "align": "center", "color": "#16A34A"},
-                    {"type": "separator", "margin": "sm", "color": "#E5E7EB"},
-                    {"type": "text", "text": f"🎫 ID ของคุณคือ {cid}", "size": "md", "weight": "bold", "align": "center", "color": "#111827", "margin": "sm"},
-                    {"type": "text", "text": "พิมพ์ C เพื่อดูบัตรสมาชิก", "size": "xs", "align": "center", "color": "#6B7280", "margin": "xs"}
+                    {"type": "text", "text": "✅ ลงทะเบียนสำเร็จ", "weight": "bold", "size": "md", "align": "center", "color": "#22C55E"},
+                    {"type": "text", "text": f"🎫 ID ของคุณคือ {cid}", "size": "sm", "weight": "bold", "align": "center", "color": "#FACC15"},
+                    {"type": "text", "text": "พิมพ์ C เพื่อดูบัตรสมาชิก", "size": "xs", "align": "center", "color": "#9CA3AF"}
                 ]
             }
         }
@@ -2622,9 +2642,9 @@ def flex_summary(st, event=None):
         # ===== หัวตาราง =====
         rows.append({
             "type": "box", "layout": "horizontal", "contents": [
-                {"type": "text", "text": "ชื่อ", "flex": 5, "size": "sm", "weight": "bold", "color": "#374151"},
-                {"type": "text", "text": "สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#374151"},
-                {"type": "text", "text": "จำนวน", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#374151"},
+                {"type": "text", "text": "👤 ผู้เล่น", "flex": 5, "size": "sm", "weight": "bold", "color": "#F9FAFB"},
+                {"type": "text", "text": "🚀 สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#F9FAFB"},
+                {"type": "text", "text": "💰 ยอดเล่น", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#F9FAFB"},
             ]
         })
         rows.append({"type": "separator", "margin": "sm", "color": "#E5E7EB"})
@@ -2945,7 +2965,7 @@ def on_message(event: MessageEvent):
                 f"🕒 เวลา: {now}\n"
                 "💰 ยอดคงเหลือปัจจุบัน: 0"
             )
-            safe_reply(event, TextSendMessage(text=reply_msg))
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_msg))
             return
         
 
@@ -3491,9 +3511,6 @@ def on_message(event: MessageEvent):
             if not is_admin(uid):
                 safe_reply(event, TextSendMessage("คำสั่งประกาศราคานี้ใช้ได้เฉพาะแอดมิน"))
                 return
-            if st["phase"] == "NONE":
-                safe_reply(event, TextSendMessage("❌ ยังไม่ได้เปิดรอบ ไม่สามารถแจ้งราคาได้"))
-                return
 
             if m_announce:
                 # กลุ่ม: 1=camp,2=hi_min,3=hi_max,4=hi_rate,5=lo_min,6=lo_max,7=lo_rate
@@ -3603,7 +3620,6 @@ def on_message(event: MessageEvent):
                 st["pendingCode"] = None
                 st["escrow"] = {}
                 st["settling"] = False
-                st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["price"] = {"camp": camp, "HI": (hi_amount, hi_rate), "LO": (lo_amount, lo_rate)}
 
@@ -3622,7 +3638,6 @@ def on_message(event: MessageEvent):
                 st["pendingCode"] = None
                 st["escrow"] = {}
                 st["settling"] = False
-                st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["note"] = note or st.get("note")
 
@@ -4065,56 +4080,6 @@ def on_message(event: MessageEvent):
             return
 
 
-        # ==== ยกเลิกบิลฝั่งต่ำ ====
-        if text.strip() == "ยกเลิกต่ำ":
-            if not is_admin(uid):
-                safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
-            if st["phase"] == "NONE":
-                safe_reply(event, TextSendMessage("ยกเลิกไม่ได้: รอบนี้สรุปจบแล้ว")); return
-            lo_bets = [b for b in st["bet_index"].values() if b["side"] == "LO"]
-            if not lo_bets:
-                safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งต่ำในรอบนี้")); return
-            with with_users_lock():
-                for b in lo_bets:
-                    tuid = b["uid"]
-                    esc = st["escrow"].get(tuid, 0)
-                    refund = min(esc, b["amount"])
-                    if refund > 0:
-                        users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                        st["escrow"][tuid] = esc - refund
-                        if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
-                    st["bet_index"].pop(tuid, None)
-                st["totals"]["LO"] = 0
-                save_users_persist()
-            names = ", ".join(b["name"] for b in lo_bets)
-            extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
-            safe_reply(event, TextSendMessage(f"✅ ยกเลิกบิลฝั่งต่ำสำเร็จ{extra} ({len(lo_bets)} บิล)\nคืนเครดิตให้: {names}")); return
-
-        # ==== ยกเลิกบิลฝั่งสูง ====
-        if text.strip() == "ยกเลิกสูง":
-            if not is_admin(uid):
-                safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
-            if st["phase"] == "NONE":
-                safe_reply(event, TextSendMessage("ยกเลิกไม่ได้: รอบนี้สรุปจบแล้ว")); return
-            hi_bets = [b for b in st["bet_index"].values() if b["side"] == "HI"]
-            if not hi_bets:
-                safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งสูงในรอบนี้")); return
-            with with_users_lock():
-                for b in hi_bets:
-                    tuid = b["uid"]
-                    esc = st["escrow"].get(tuid, 0)
-                    refund = min(esc, b["amount"])
-                    if refund > 0:
-                        users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                        st["escrow"][tuid] = esc - refund
-                        if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
-                    st["bet_index"].pop(tuid, None)
-                st["totals"]["HI"] = 0
-                save_users_persist()
-            names = ", ".join(b["name"] for b in hi_bets)
-            extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
-            safe_reply(event, TextSendMessage(f"✅ ยกเลิกบิลฝั่งสูงสำเร็จ{extra} ({len(hi_bets)} บิล)\nคืนเครดิตให้: {names}")); return
-
         # ==== ยกเลิกบิล ====
         m_cancel_by_cid = re.match(r"^x\s+(\d+)$", text.strip(), re.IGNORECASE)
         # เช็คว่าเป็นคำสั่งยกเลิกหรือไม่
@@ -4341,8 +4306,26 @@ def on_image(event: MessageEvent):
             rooms[key] = start_state()
         st = rooms[key]
 
-    # บอทเงียบเมื่อลูกค้าส่งรูป ไม่ตอบกลับ
-    return
+    # ต้องมีข้อมูลผู้ใช้ก่อน (พิมพ์ add มาก่อน)
+    with with_users_lock():
+        u = users.get(uid)
+
+    if not u:
+        safe_reply(event, TextSendMessage("กรุณาพิมพ์ add เพื่อรับไอดีก่อน"))
+        return
+
+    # ตอบการ์ด C ของผู้ที่ส่งรูป
+    try:
+        safe_reply(event, flex_customer_card(st, u))
+    except Exception:
+        # กันตก ถ้า Flex error ให้ตอบข้อความธรรมดา โดยไม่ให้พังซ้ำถ้า u หาย
+        app.logger.exception("on_image flex_customer_card failed uid=%s", uid)
+        cid = u.get('cid', '-') if isinstance(u, dict) else '-'
+        name = u.get('name', 'ผู้เล่น') if isinstance(u, dict) else 'ผู้เล่น'
+        credit = u.get('credit', 0) if isinstance(u, dict) else 0
+        safe_reply(event, TextSendMessage(
+            f"ID {cid} • {name} • เครดิต {fmt(credit)} บ."
+        ))
 
 
 def current_camp(st):

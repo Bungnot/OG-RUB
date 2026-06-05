@@ -1411,6 +1411,64 @@ def flex_no_price_notice(pair_no: int, camp: str, side: str, player_names=None):
         }
     )
 
+def flex_refund_notice(pair_no: int, player_list):
+    """
+    FLEX card แจ้งคืนเครดิต
+    player_list = [{"name": "...", "amount": 100}, ...]
+    """
+    if not player_list:
+        return None
+    
+    # สร้างรายชื่อผู้เล่น
+    player_contents = []
+    for player in player_list:
+        player_contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "margin": "xs",
+            "contents": [
+                {"type": "text", "text": f"• {player['name']}", 
+                 "size": "xs", "color": "#374151", "flex": 3},
+                {"type": "text", "text": f"{player['amount']} บาท",
+                 "size": "xs", "color": "#111827", "align": "end", "flex": 1, "weight": "bold"}
+            ]
+        })
+    
+    return FlexSendMessage(
+        alt_text=f"คืนเครดิต รอบที่ {pair_no}",
+        contents={
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "0px",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": "#F97316",
+                        "paddingAll": "14px",
+                        "contents": [
+                            {"type": "text", "text": "💰 คืนเครดิต",
+                             "weight": "bold", "size": "lg", "align": "center", "color": "#FFFFFF"},
+                            {"type": "text", "text": f"รอบที่ {pair_no}",
+                             "size": "xs", "align": "center", "color": "#FED7AA", "margin": "xs"},
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "paddingAll": "14px",
+                        "spacing": "xs",
+                        "contents": player_contents
+                    }
+                ]
+            }
+        }
+    )
+
+
 def flex_pause_notice(pair_no: int, camp: str):
     if not camp:
         camp = "ไม่ระบุค่าย"
@@ -3594,9 +3652,8 @@ def on_message(event: MessageEvent):
         m_announce = R_ANN.match(text)
         m_announce_single = R_ANN_SINGLE.match(text)
         m_announce_onesided = R_ANN_ONESIDED.match(text)
-        m_announce_onesided_lo = R_ANN_ONESIDED_LO.match(text)
 
-        if (m_announce or m_announce_single or m_announce_onesided or m_announce_onesided_lo) and not re.match(r"^\s*o\b", text, re.IGNORECASE):
+        if (m_announce or m_announce_single or m_announce_onesided ) and not re.match(r"^\s*o\b", text, re.IGNORECASE):
             if not is_admin(uid):
                 safe_reply(event, TextSendMessage("คำสั่งประกาศราคานี้ใช้ได้เฉพาะแอดมิน"))
                 return
@@ -3644,51 +3701,17 @@ def on_message(event: MessageEvent):
                         st["totals"]["LO"] = 0
                         save_users_persist()
                     
-                    player_names = [b["name"] for b in lo_bets]
+                    player_list = [{"name": b["name"], "amount": b["amount"]} for b in lo_bets]
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "LO", player_names)); return
+                    safe_reply(event, [
+                        flex_open_with_prices(st["pairNo"], camp, hi_amount, hi_rate, lo_amount, lo_rate),
+                        flex_refund_notice(st["pairNo"], player_list)
+                    ]); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "LO")); return
-            elif m_announce_onesided_lo:
-                # ล/ไม่มี ย300/1.85
-                camp      = m_announce_onesided_lo.group(1).strip()
-                hi_amount = "ไม่มี"
-                hi_rate   = None
-                lo_amount = _parse_amount_range(m_announce_onesided_lo.group(2))
-                lo_rate   = m_announce_onesided_lo.group(3)
-                
-                # ===== บล็อกการแทงฝั่งสูงทันที =====
-                st["disabled_sides"].add("HI")
-                
-                # ===== คืนบิลฝั่งสูงที่เล่นก่อนแจ้งราคา =====
-                lo_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "HI"]
-                if lo_bets:
-                    # คืนเครดิตให้ผู้เล่นสูง
-                    with with_users_lock():
-                        for b in lo_bets:
-                            tuid = b["uid"]
-                            esc = st.get("escrow", {}).get(tuid, 0)
-                            refund = min(esc, b["amount"])
-                            if refund > 0:
-                                users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                                st["escrow"][tuid] = esc - refund
-                                if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
-                            # ลบบิลฝั่งสูงออก
-                            st["bet_index"].pop(tuid, None)
-                        st["totals"]["HI"] = 0
-                        save_users_persist()
-                    
-                    player_names = [b["name"] for b in lo_bets]
-                    save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "HI", player_names)); return
-                else:
-                    # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
-                    save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "HI")); return
+                    safe_reply(event, flex_open_with_prices(st["pairNo"], camp, hi_amount, hi_rate, lo_amount, lo_rate)); return
             else:
-                # กลุ่ม: 1=camp,2=side,3=amount_min,4=amount_max,5=rate
                 camp    = m_announce_single.group(1).strip()
                 side_ch = m_announce_single.group(2).lower()
                 am_min  = int(m_announce_single.group(3))

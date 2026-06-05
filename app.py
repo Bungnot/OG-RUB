@@ -2633,114 +2633,185 @@ def flex_register_success(cid: int):
 
 from linebot.models import FlexSendMessage
 
-def flex_summary(st, event=None):
-    bets = list(st["bet_index"].values())
+def _build_summary_bubble(bets_chunk, pair_no, page_no, total_pages, total_bets):
+    """สร้าง bubble เดียวสำหรับ flex_summary (ใช้ใน single และ carousel)"""
     rows = []
 
-    if not bets:
+    # ===== หัวตาราง =====
+    rows.append({
+        "type": "box", "layout": "horizontal", "contents": [
+            {"type": "text", "text": "ชื่อ", "flex": 5, "size": "sm", "weight": "bold", "color": "#374151"},
+            {"type": "text", "text": "สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#374151"},
+            {"type": "text", "text": "จำนวน", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#374151"},
+        ]
+    })
+    rows.append({"type": "separator", "margin": "sm", "color": "#E5E7EB"})
+
+    # ===== รายการบิล =====
+    for b in bets_chunk:
+        name = b["name"]
+        if b["side"] == "HI":
+            side_display = "✅ สูง"
+            side_color = "#22C55E"
+        else:
+            side_display = "❌ ต่ำ"
+            side_color = "#EF4444"
+
         rows.append({
-            "type": "text",
-            "text": "❌ ยังไม่มีบิล",
-            "size": "md",
-            "align": "center",
-            "color": "#9CA3AF",
-            "weight": "bold"
-        })
-    else:
-        # ===== หัวตาราง =====
-        rows.append({
-            "type": "box", "layout": "horizontal", "contents": [
-                {"type": "text", "text": "ชื่อ", "flex": 5, "size": "sm", "weight": "bold", "color": "#374151"},
-                {"type": "text", "text": "สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#374151"},
-                {"type": "text", "text": "จำนวน", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#374151"},
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "backgroundColor": "#FFFFFF",
+                    "cornerRadius": "6px",
+                    "paddingAll": "6px",
+                    "contents": [
+                        {"type": "text", "text": name, "flex": 5, "size": "sm", "color": "#111827"},
+                        {"type": "text", "text": side_display, "flex": 3, "size": "sm", "align": "center", "color": side_color},
+                        {"type": "text", "text": fmt(b["amount"]), "flex": 3, "size": "sm", "align": "end", "color": "#111827"},
+                    ]
+                },
+                {"type": "separator", "color": "#E5E7EB", "margin": "xs"}
             ]
         })
-        rows.append({"type": "separator", "margin": "sm", "color": "#E5E7EB"})
 
-        # ===== รายการบิล =====
-        for i, b in enumerate(bets):
-            bg_color = "#FFFFFF"   # ใช้สีเดียวทุกแถว
-            name = b["name"]
-            if b["side"] == "HI":
-                side_display = "✅ สูง"
-                side_color = "#22C55E"
-            else:
-                side_display = "❌ ต่ำ"
-                side_color = "#EF4444"
+    # หัว bubble: แสดงหมายเลขหน้าถ้ามีหลายหน้า
+    if total_pages > 1:
+        header_text = f"📊 สรุปการแทง รอบ {pair_no} ({total_bets}) — หน้า {page_no}/{total_pages}"
+    else:
+        header_text = f"📊 สรุปการแทง รอบ {pair_no} ({total_bets})"
 
-            # กล่องข้อมูลลูกค้า
-            rows.append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "backgroundColor": bg_color,
-                        "cornerRadius": "6px",
-                        "paddingAll": "6px",
-                        "contents": [
-                            {"type": "text", "text": name, "flex": 5, "size": "sm", "color": "#111827"},
-                            {"type": "text", "text": side_display, "flex": 3, "size": "sm", "align": "center", "color": side_color},
-                            {"type": "text", "text": fmt(b["amount"]), "flex": 3, "size": "sm", "align": "end", "color": "#111827"},
-                        ]
-                    },
-                    # ==== เส้นคั่นใต้แต่ละชื่อ ====
-                    {"type": "separator", "color": "#E5E7EB", "margin": "xs"}
-                ]
-            })
+    # ส่วนท้าย: หน้าสุดท้ายแสดงรวมทั้งหมด, หน้าอื่นแสดงหน้านี้มีกี่บิล
+    if page_no == total_pages:
+        footer_text = f"รวมทั้งหมด {total_bets} บิล"
+        footer_color = "#374151"
+    else:
+        footer_text = f"หน้า {page_no}/{total_pages} • {len(bets_chunk)} บิล → ปัดซ้ายดูหน้าถัดไป"
+        footer_color = "#6B7280"
 
-    # ===== Flex Message =====
-    return FlexSendMessage(
-        alt_text=f"📋 สรุปการแทง คู่ที่ {st['pairNo']}",
-        contents={
-            "type": "bubble",
-            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "paddingAll": "0px",
-                "contents": [
-                    # ส่วนหัว
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "paddingAll": "14px",
-                        "backgroundColor": "#22C55E",
-                        "contents": [{
+    return {
+        "type": "bubble",
+        "styles": {"body": {"backgroundColor": "#FFFFFF"}},
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "paddingAll": "0px",
+            "contents": [
+                # ส่วนหัว
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "paddingAll": "14px",
+                    "backgroundColor": "#22C55E",
+                    "contents": [{
+                        "type": "text",
+                        "text": header_text,
+                        "weight": "bold",
+                        "align": "center",
+                        "size": "md",
+                        "color": "#FFFFFF",
+                        "wrap": True
+                    }]
+                },
+                # ส่วนตาราง
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "backgroundColor": "#F9FAFB",
+                    "paddingAll": "12px",
+                    "spacing": "sm",
+                    "contents": rows
+                },
+                # ส่วนท้าย
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "backgroundColor": "#F3F4F6",
+                    "paddingAll": "10px",
+                    "contents": [
+                        {"type": "text",
+                         "text": footer_text,
+                         "align": "end",
+                         "size": "sm",
+                         "color": footer_color}
+                    ]
+                }
+            ]
+        }
+    }
+
+
+def flex_summary(st, event=None):
+    bets = list(st["bet_index"].values())
+    PER_PAGE = 36
+
+    # ===== กรณีไม่มีบิล =====
+    if not bets:
+        return FlexSendMessage(
+            alt_text=f"📋 สรุปการแทง รอบ {st['pairNo']}",
+            contents={
+                "type": "bubble",
+                "styles": {"body": {"backgroundColor": "#FFFFFF"}},
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "paddingAll": "14px",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "paddingAll": "14px",
+                            "backgroundColor": "#22C55E",
+                            "cornerRadius": "12px",
+                            "contents": [{
+                                "type": "text",
+                                "text": f"📊 สรุปการแทง รอบ {st['pairNo']} (0)",
+                                "weight": "bold",
+                                "align": "center",
+                                "size": "lg",
+                                "color": "#FFFFFF"
+                            }]
+                        },
+                        {
                             "type": "text",
-                            "text": f"📊 สรุปการแทง รอบ {st['pairNo']} ({len(bets)})",
-                            "weight": "bold",
+                            "text": "❌ ยังไม่มีบิล",
+                            "size": "md",
                             "align": "center",
-                            "size": "lg",
-                            "color": "#FFFFFF"
-                        }]
-                    },
-                    # ส่วนตาราง
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": "#F9FAFB",
-                        "paddingAll": "12px",
-                        "spacing": "sm",
-                        "contents": rows
-                    },
-                    # ส่วนท้าย
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": "#F3F4F6",
-                        "paddingAll": "10px",
-                        "contents": [
-                            {"type": "text",
-                             "text": f"รวมทั้งหมด {len(bets)} บิล",
-                             "align": "end",
-                             "size": "sm",
-                             "color": "#E5E7EB"}
-                        ]
-                    }
-                ]
+                            "color": "#9CA3AF",
+                            "weight": "bold",
+                            "margin": "lg"
+                        }
+                    ]
+                }
             }
+        )
+
+    total_bets = len(bets)
+    total_pages = ceil(total_bets / PER_PAGE)
+
+    # ===== กรณีบิลไม่เกิน 36 — ส่งเป็น bubble เดียว =====
+    if total_pages == 1:
+        bubble = _build_summary_bubble(bets, st["pairNo"], 1, 1, total_bets)
+        return FlexSendMessage(
+            alt_text=f"📋 สรุปการแทง รอบ {st['pairNo']} ({total_bets})",
+            contents=bubble
+        )
+
+    # ===== กรณีบิลเกิน 36 — ส่งเป็น Carousel หน้าละ 36 =====
+    bubbles = []
+    for page_no in range(1, total_pages + 1):
+        start = (page_no - 1) * PER_PAGE
+        chunk = bets[start: start + PER_PAGE]
+        bubble = _build_summary_bubble(chunk, st["pairNo"], page_no, total_pages, total_bets)
+        bubbles.append(bubble)
+
+    return FlexSendMessage(
+        alt_text=f"📋 สรุปการแทง รอบ {st['pairNo']} ({total_bets}) — {total_pages} หน้า",
+        contents={
+            "type": "carousel",
+            "contents": bubbles
         }
     )
 

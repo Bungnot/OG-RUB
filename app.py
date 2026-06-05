@@ -88,25 +88,63 @@ _rooms_lock = threading.RLock()
 # ====== WEBHOOK IDEMPOTENCY / กัน LINE retry ประมวลผลซ้ำ ======
 # LINE อาจส่ง event เดิมซ้ำได้ ถ้า webhook ตอบช้า/timeout
 _processed_msg_lock = threading.RLock()
-_processed_msg_ids = {}  # message_id -> timestamp
 PROCESSED_MSG_TTL_SEC = int(os.getenv("PROCESSED_MSG_TTL_SEC", "900"))
+PROCESSED_MSG_FILE = os.path.join(os.getenv("DATA_DIR", "./data"), "processed_msgs.json")
+
+def _load_processed_msgs():
+    try:
+        if not os.path.exists(PROCESSED_MSG_FILE): return {}
+        with open(PROCESSED_MSG_FILE, "r", encoding="utf-8") as f:
+            import json
+            return json.load(f)
+    except:
+        return {}
+
+def _save_processed_msgs(data):
+    try:
+        import json
+        with open(PROCESSED_MSG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except:
+        pass
 
 def already_processed_message(message_id: str) -> bool:
-    """คืน True ถ้า message id นี้เคยถูกประมวลผลแล้ว"""
+    """คืน True ถ้า message id นี้เคยถูกประมวลผลแล้ว (แชร์ข้าม Worker ผ่านไฟล์)"""
     if not message_id:
         return False
     now = time.time()
     with _processed_msg_lock:
-        # เก็บ cache ให้เล็ก ไม่ให้ RAM บวม
-        for mid, ts in list(_processed_msg_ids.items()):
-            if now - ts > PROCESSED_MSG_TTL_SEC:
-                _processed_msg_ids.pop(mid, None)
-
-        if message_id in _processed_msg_ids:
-            return True
-
-        _processed_msg_ids[message_id] = now
-        return False
+        try:
+            import fcntl
+            with open(PROCESSED_MSG_FILE + ".lock", "a") as lockfile:
+                fcntl.flock(lockfile, fcntl.LOCK_EX)
+                data = _load_processed_msgs()
+                
+                # ล้างข้อมูลเก่า
+                for mid in list(data.keys()):
+                    if now - data[mid] > PROCESSED_MSG_TTL_SEC:
+                        del data[mid]
+                
+                if message_id in data:
+                    fcntl.flock(lockfile, fcntl.LOCK_UN)
+                    return True
+                
+                data[message_id] = now
+                _save_processed_msgs(data)
+                fcntl.flock(lockfile, fcntl.LOCK_UN)
+                return False
+        except Exception:
+            # Fallback ไปใช้ memory ถ้า fcntl ใช้ไม่ได้ (เช่น Windows)
+            global _processed_msg_ids_fallback
+            if "_processed_msg_ids_fallback" not in globals():
+                _processed_msg_ids_fallback = {}
+            for mid in list(_processed_msg_ids_fallback.keys()):
+                if now - _processed_msg_ids_fallback[mid] > PROCESSED_MSG_TTL_SEC:
+                    del _processed_msg_ids_fallback[mid]
+            if message_id in _processed_msg_ids_fallback:
+                return True
+            _processed_msg_ids_fallback[message_id] = now
+            return False
 
 
 def has_active_bet(uid):
@@ -151,8 +189,8 @@ MIDDLE_FEE  = float(os.getenv("MIDDLE_FEE",  "0.03"))   # หักเมื่�
 MIN_BET = int(os.getenv("MIN_BET", "30"))
 MAX_BET = int(os.getenv("MAX_BET", "5000"))
 USER_SIDE_CAP = {"HI": 5000, "LO": 5000}
-SIDE_CAP      = {"HI": 30000, "LO": 30000}
-ROUND_CAP     = 60000
+SIDE_CAP      = {"HI": 40000, "LO": 30000}
+ROUND_CAP     = 70000
 
 # ====== SIMPLE PER-USER COOLDOWN (anti-spam reply gap) ======
 REPLY_COOLDOWN_SEC = int(os.getenv("REPLY_COOLDOWN_SEC", "6"))
@@ -595,6 +633,39 @@ rooms = {}   # room_key -> state
 users = {}   # uid -> {uid,cid,name,pictureUrl,credit}
 nextCustomerId = 201
 
+ROOMS_JSON = os.path.join(DATA_DIR, "rooms.json")
+
+def save_rooms_persist():
+    try:
+        with with_rooms_lock():
+            # แปลง set ให้เป็น list ก่อนบันทึก
+            snapshot = {}
+            for k, v in rooms.items():
+                v_copy = dict(v)
+                if "disabled_sides" in v_copy and isinstance(v_copy["disabled_sides"], set):
+                    v_copy["disabled_sides"] = list(v_copy["disabled_sides"])
+                snapshot[k] = v_copy
+        _atomic_write_json(ROOMS_JSON, snapshot)
+    except Exception:
+        app.logger.exception("save_rooms_persist failed")
+
+def load_rooms_persist():
+    global rooms
+    try:
+        if not os.path.exists(ROOMS_JSON): return
+        with open(ROOMS_JSON, "rb") as f:
+            data = _loads_bytes(f.read())
+        with with_rooms_lock():
+            rooms.clear()
+            for k, v in (data or {}).items():
+                if "disabled_sides" in v and isinstance(v["disabled_sides"], list):
+                    v["disabled_sides"] = set(v["disabled_sides"])
+                rooms[k] = v
+    except Exception:
+        app.logger.exception("load_rooms_persist failed")
+
+load_rooms_persist()
+
 
 def _get_play_help_text():
     return (
@@ -654,6 +725,7 @@ def _persist_worker():
         _save_event.wait()
         time.sleep(0.35)  # รวมคำสั่งภายใน 350ms ก่อนเขียน
         _save_users_snapshot()
+        save_rooms_persist()
         _save_event.clear()
 
 threading.Thread(target=_persist_worker, daemon=True).start()
@@ -843,19 +915,6 @@ def in_group_or_room(src) -> bool:
 
 
 def is_backoffice_group_id(gid): return gid in BACKOFFICE_GROUP_IDS
-
-def start_state():
-    return {
-        "phase": "NONE",  # NONE | OPEN | PAUSED
-        "pairNo": 0,
-        "note": None,
-        "pendingCode": None,
-        "totals": {"HI": 0, "LO": 0},
-        "bet_index": {},  # uid -> {uid,name,side,amount}
-        "funds": {},      # uid -> ทุนรอบนี้
-        "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
-        "escrow": {},     # เงินที่ถูกหักออกไปทันทีเมื่อรับบิล uid -> amount
-    }
 
 # แก้ไขในฟังก์ชัน start_state()
 def start_state():
@@ -3453,23 +3512,21 @@ def on_message(event: MessageEvent):
                     "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น"
                 )),
                 FlexSendMessage(
-                    alt_text="กดตรงนี้ ส่งสลิป + หลังบ้าน",
+                    alt_text="กดเข้าหลังบ้าน",
                     contents={
                         "type": "bubble",
-                        "size": "kilo",
                         "body": {
                             "type": "box",
                             "layout": "vertical",
-                            "paddingAll": "12px",
+                            "paddingAll": "16px",
                             "contents": [
                                 {
                                     "type": "button",
                                     "style": "primary",
                                     "color": "#16A34A",
-                                    "height": "sm",
                                     "action": {
                                         "type": "uri",
-                                        "label": "กดตรงนี้ ส่งสลิป + หลังบ้าน",
+                                        "label": "กดเข้าหลังบ้าน",
                                         "uri": DEPOSIT_URL
                                     }
                                 }
@@ -3803,12 +3860,20 @@ def on_message(event: MessageEvent):
             sum_stake = sum(b["amount"] for b in st["bet_index"].values())
             rows, footer = settle_by_code(st, code)
 
-            with with_users_lock():
-                for r in rows:
-                    u = users.get(r["uid"])
-                    if u:
-                        u["credit"] = max(u.get("credit", 0) + r["payout"], 0)
-                save_users_persist()
+            try:
+                with with_users_lock():
+                    for r in rows:
+                        u = users.get(r["uid"])
+                        if u:
+                            u["credit"] = max(u.get("credit", 0) + r["payout"], 0)
+                    save_users_persist()
+            except Exception as e:
+                app.logger.exception(f"Failed to update credits for round {st['pairNo']}: {e}")
+                st["settling"] = False
+                st["phase"] = "PAUSED"
+                release_round_action("settle", key, st["pairNo"])
+                safe_reply(event, TextSendMessage(f"❌ เกิดข้อผิดพลาดในการอัปเดตเครดิต: {e}\nกรุณาลองกดยืนยันผลอีกครั้ง"))
+                return
 
             # ล้าง state ห้อง หลังสรุปผลสำเร็จ
             st["last_settled_pairNo"] = st["pairNo"]
@@ -4449,14 +4514,18 @@ def admin_panel():
     total_credit = sum(u.get("credit",0) for u in all_users)
     credit_users = len([u for u in all_users if u.get("credit",0) > 0])
 
+    import json
     rows = ""
     for u in data:
         cid = u.get("cid","")
         name = html_escape(u.get("name",""))
+        # ป้องกัน XSS ใน JavaScript string โดยใช้ json.dumps
+        js_uid = html_escape(json.dumps(u.get("uid","")))
+        js_name = html_escape(json.dumps(u.get("name","")))
         credit = u.get("credit",0)
-        uid = u.get("uid","")
+        uid = html_escape(u.get("uid",""))
         cc = "#fbbf24" if credit > 0 else "#64748b"
-        rows += f'<tr><td class="c1">{cid}</td><td class="c2">{name}</td><td id="cr_{uid}" class="c3" style="color:{cc}">{credit:,}</td><td class="c4"><button onclick="showM(\'{uid}\',\'{name}\',\'add\')" class="ba">+</button><button onclick="showM(\'{uid}\',\'{name}\',\'sub\')" class="bs">-</button><button onclick="showM(\'{uid}\',\'{name}\',\'set\')" class="bx">✏</button></td></tr>'
+        rows += f'<tr><td class="c1">{cid}</td><td class="c2">{name}</td><td id="cr_{uid}" class="c3" style="color:{cc}">{credit:,}</td><td class="c4"><button onclick="showM({js_uid}, {js_name}, \'add\')" class="ba">+</button><button onclick="showM({js_uid}, {js_name}, \'sub\')" class="bs">-</button><button onclick="showM({js_uid}, {js_name}, \'set\')" class="bx">✏</button></td></tr>'
 
     import glob
     backups = sorted(glob.glob(os.path.join(DATA_DIR, "backup_round_*.json")), key=lambda x: os.path.getmtime(x), reverse=True)

@@ -1048,17 +1048,17 @@ def flex_open(pair_no, note=None):
                 "layout": "vertical",
                 "paddingAll": "0px",
                 "contents": [
-                    # แถบสีเขียวบน
+                    # แถบสีเทาบน
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#16A34A",
+                        "backgroundColor": "#6B7280",
                         "paddingAll": "16px",
                         "contents": [
                             {"type": "text", "text": "🎯 เริ่มแทงได้ 🎯",
                              "weight": "bold", "size": "xl", "align": "center", "color": "#FFFFFF"},
                             {"type": "text", "text": "บอทไม่จับ ไม่ได้เสีย ทุกกรณี",
-                             "size": "xs", "align": "center", "color": "#D1FAE5", "margin": "xs"},
+                             "size": "xs", "align": "center", "color": "#E5E7EB", "margin": "xs"},
                         ]
                     },
                     # Body ขาว ตัวหนังสือดำ

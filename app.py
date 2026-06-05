@@ -3598,15 +3598,15 @@ def on_message(event: MessageEvent):
                 lo_amount = "ไม่มี"
                 lo_rate   = None
                 
-                # ===== บล็อกการแทงฝั่งสูงทันที =====
-                st["disabled_sides"].add("HI")
+                # ===== บล็อกการแทงฝั่งต่ำทันที =====
+                st["disabled_sides"].add("LO")
                 
-                # ===== คืนบิลฝั่งสูงที่เล่นก่อนแจ้งราคา =====
-                hi_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "HI"]
-                if hi_bets:
-                    # คืนเครดิตให้ผู้เล่นสูง
+                # ===== คืนบิลฝั่งต่ำที่เล่นก่อนแจ้งราคา =====
+                lo_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "LO"]
+                if lo_bets:
+                    # คืนเครดิตให้ผู้เล่นต่ำ
                     with with_users_lock():
-                        for b in hi_bets:
+                        for b in lo_bets:
                             tuid = b["uid"]
                             esc = st.get("escrow", {}).get(tuid, 0)
                             refund = min(esc, b["amount"])
@@ -3614,23 +3614,23 @@ def on_message(event: MessageEvent):
                                 users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
                                 st["escrow"][tuid] = esc - refund
                                 if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
-                            # ลบบิลฝั่งสูงออก
+                            # ลบบิลฝั่งต่ำออก
                             st["bet_index"].pop(tuid, None)
-                        st["totals"]["HI"] = 0
+                        st["totals"]["LO"] = 0
                         save_users_persist()
                     
-                    names = ", ".join(b["name"] for b in hi_bets)
+                    names = ", ".join(b["name"] for b in lo_bets)
                     save_rooms_state()  # บันทึกสถานะรอบ
                     safe_reply(event, [
-                        flex_no_price_notice(st["pairNo"], camp, "HI"),
+                        flex_no_price_notice(st["pairNo"], camp, "LO"),
                         TextSendMessage(
-                            f"🔄 คืนบิลฝั่งสูง ({len(hi_bets)} บิล): {names}"
+                            f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}"
                         )
                     ]); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "HI")); return
+                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "LO")); return
             elif m_announce_onesided_lo:
                 # ล/ไม่มี ย300/1.85
                 camp      = m_announce_onesided_lo.group(1).strip()

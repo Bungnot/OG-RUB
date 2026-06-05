@@ -548,7 +548,7 @@ ADMIN_IDS = [s.strip() for s in os.getenv(
 
 BACKOFFICE_GROUP_IDS = {  # กลุ่มหลังบ้าน (รับสรุปพร้อมกำไรสุทธิ)
     gid.strip()
-    for gid in os.getenv("BACKOFFICE_GROUP_IDS", "C41cbefb9d903fb55c4eef651598b6513").split(",")
+    for gid in os.getenv("BACKOFFICE_GROUP_IDS", "Cc462daad00c0bc3e15560c86191954a8").split(",")
     if gid.strip()
 }
 
@@ -768,16 +768,16 @@ def _round_profit(x: float) -> int:
 # เสมอ2   = สูงและต่ำเสียยอดเดิมพันทั้งหมด
 # จ/จาว   = ไม่หัก คืนเต็มทั้ง 2 ฝั่ง
 RESULT_DEFS = {
-    # สูงชนะ
-    "ส1.7":  {"label": "สูงชนะ หัก 30% (จ่าย 0.70)", "special": "HI_WIN", "rate": 0.70},
-    "ส1.85": {"label": "สูงชนะ หัก 15% (จ่าย 0.85)", "special": "HI_WIN", "rate": 0.85},
-    "ส1.95": {"label": "สูงชนะ หัก 5% (จ่าย 0.95)",  "special": "HI_WIN", "rate": 0.95},
-    "ส2":    {"label": "สูงชนะ เต็ม (จ่าย 1.00)",     "special": "HI_WIN", "rate": 1.00},
-    # ต่ำชนะ
-    "ต1.7":  {"label": "ต่ำชนะ หัก 30% (จ่าย 0.70)",  "special": "LO_WIN", "rate": 0.70},
-    "ต1.85": {"label": "ต่ำชนะ หัก 15% (จ่าย 0.85)",  "special": "LO_WIN", "rate": 0.85},
-    "ต1.95": {"label": "ต่ำชนะ หัก 5% (จ่าย 0.95)",   "special": "LO_WIN", "rate": 0.95},
-    "ต2":    {"label": "ต่ำชนะ เต็ม (จ่าย 1.00)",      "special": "LO_WIN", "rate": 1.00},
+    # สูงชนะ (rate = เงินที่ได้คืนทั้งหมด = ต้นทุน + กำไร)
+    "ส1.7":  {"label": "สูงชนะ อัตราน้ำ 1.7 (กำไร ×0.7)",   "special": "HI_WIN", "rate": 1.70},
+    "ส1.85": {"label": "สูงชนะ อัตราน้ำ 1.85 (กำไร ×0.85)", "special": "HI_WIN", "rate": 1.85},
+    "ส1.95": {"label": "สูงชนะ อัตราน้ำ 1.95 (กำไร ×0.95)", "special": "HI_WIN", "rate": 1.95},
+    "ส2":    {"label": "สูงชนะ อัตราน้ำ 2.0 (กำไร ×1.00)",  "special": "HI_WIN", "rate": 2.00},
+    # ต่ำชนะ (rate = เงินที่ได้คืนทั้งหมด = ต้นทุน + กำไร)
+    "ต1.7":  {"label": "ต่ำชนะ อัตราน้ำ 1.7 (กำไร ×0.7)",   "special": "LO_WIN", "rate": 1.70},
+    "ต1.85": {"label": "ต่ำชนะ อัตราน้ำ 1.85 (กำไร ×0.85)", "special": "LO_WIN", "rate": 1.85},
+    "ต1.95": {"label": "ต่ำชนะ อัตราน้ำ 1.95 (กำไร ×0.95)", "special": "LO_WIN", "rate": 1.95},
+    "ต2":    {"label": "ต่ำชนะ อัตราน้ำ 2.0 (กำไร ×1.00)",  "special": "LO_WIN", "rate": 2.00},
     # เสมอ
     "เสมอสูง": {"label": "เสมอสูง หัก 3% / ต่ำเสียทั้งหมด",   "special": "DRAW_HI_FEE_LO_LOSE"},
     "เสมอต่ำ": {"label": "เสมอต่ำ หัก 3% / สูงเสียทั้งหมด",   "special": "DRAW_LO_FEE_HI_LOSE"},

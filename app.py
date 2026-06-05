@@ -3606,6 +3606,7 @@ def on_message(event: MessageEvent):
                 st["pendingCode"] = None
                 st["escrow"] = {}
                 st["settling"] = False
+                st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["price"] = {"camp": camp, "HI": (hi_amount, hi_rate), "LO": (lo_amount, lo_rate)}
 
@@ -3624,6 +3625,7 @@ def on_message(event: MessageEvent):
                 st["pendingCode"] = None
                 st["escrow"] = {}
                 st["settling"] = False
+                st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["note"] = note or st.get("note")
 

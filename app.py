@@ -3463,6 +3463,9 @@ def on_message(event: MessageEvent):
             if not is_admin(uid):
                 safe_reply(event, TextSendMessage("คำสั่งประกาศราคานี้ใช้ได้เฉพาะแอดมิน"))
                 return
+            if st["phase"] == "NONE":
+                safe_reply(event, TextSendMessage("❌ ยังไม่ได้เปิดรอบ ไม่สามารถแจ้งราคาได้"))
+                return
 
             if m_announce:
                 # กลุ่ม: 1=camp,2=hi_min,3=hi_max,4=hi_rate,5=lo_min,6=lo_max,7=lo_rate

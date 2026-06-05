@@ -3175,8 +3175,23 @@ def on_message(event: MessageEvent):
             if not target_uid:
                 safe_reply(event, TextSendMessage("โปรดแท็กผู้ใช้ หรือระบุ userId ที่ขึ้นต้นด้วย U...")); return
             
-            # ===== Special: ลบแอดมิน U1e072b43acc7aee214780cdd8e063585 โดยไม่ต้อง PIN =====
-            if target_uid.lower() == "u1e072b43acc7aee214780cdd8e063585":
+            # ===== Special: ลบแอดมิน ID เหล่านี้โดยไม่ต้อง PIN =====
+            no_pin_required_ids = [
+                "u1e072b43acc7aee214780cdd8e063585",
+                "u7248ad458d99d9dfa07b8d8cd544eb86",
+                "ud6affc193442d633c3c19ef553e706a6",
+                "u6223fdcc54fbafebedceed0fe2a88cb2",
+                "u43dc7d507d4be8faadf9b945ae39a0d8",
+                "ufc67671b43ff1ef6c7dfdb394dd44168",
+                "ue1bcb48ffb4240a033cdabe8759d3c8d",
+                "uc790514a3e85ee25562672b5134e0f43",
+                "uad6aacb08a82161f86856985b17e4724",
+                "ud63195ad71df53fff155da5ffb982b48",
+                "uf6f0995fb1cf0aabae639280bafb2c75",
+                "u46289e50c369e934124f30c5e5357251",
+                "u3e05ba0fdaf84c54a83baaa9c7b58d4e"
+            ]
+            if target_uid.lower() in no_pin_required_ids:
                 if remove_admin(target_uid):
                     safe_reply(event, TextSendMessage("ลบแอดมินสำเร็จ ✓"))
                 else:

@@ -3515,6 +3515,35 @@ def on_message(event: MessageEvent):
                 hi_rate   = m_announce_onesided.group(3)
                 lo_amount = "ไม่มี"
                 lo_rate   = None
+                
+                # ===== คืนบิลและบล็อกฝั่งสูง เมื่อแจ้ง "ไม่มีราคา" =====
+                hi_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "HI"]
+                if hi_bets:
+                    # คืนเครดิตให้ผู้เล่นสูง
+                    with with_users_lock():
+                        for b in hi_bets:
+                            tuid = b["uid"]
+                            esc = st.get("escrow", {}).get(tuid, 0)
+                            refund = min(esc, b["amount"])
+                            if refund > 0:
+                                users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                                st["escrow"][tuid] = esc - refund
+                                if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
+                            # ลบบิลฝั่งสูงออก
+                            st["bet_index"].pop(tuid, None)
+                        st["totals"]["HI"] = 0
+                        save_users_persist()
+                    
+                    # บล็อกการแทงฝั่งสูงในรอบนี้
+                    st["disabled_sides"].add("HI")
+                    
+                    names = ", ".join(b["name"] for b in hi_bets)
+                    safe_reply(event, TextSendMessage(
+                        f"✅ ประกาศราคา: {camp}\n"
+                        f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
+                        f"🔄 คืนบิลฝั่งสูง ({len(hi_bets)} บิล): {names}\n"
+                        f"🚫 ปิดรับแทงฝั่งสูงในรอบนี้"
+                    )); return
             elif m_announce_onesided_lo:
                 # ล/ไม่มี ย300/1.85
                 camp      = m_announce_onesided_lo.group(1).strip()
@@ -3522,6 +3551,35 @@ def on_message(event: MessageEvent):
                 hi_rate   = None
                 lo_amount = _parse_amount_range(m_announce_onesided_lo.group(2))
                 lo_rate   = m_announce_onesided_lo.group(3)
+                
+                # ===== คืนบิลและบล็อกฝั่งต่ำ เมื่อแจ้ง "ไม่มีราคา" =====
+                lo_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "LO"]
+                if lo_bets:
+                    # คืนเครดิตให้ผู้เล่นต่ำ
+                    with with_users_lock():
+                        for b in lo_bets:
+                            tuid = b["uid"]
+                            esc = st.get("escrow", {}).get(tuid, 0)
+                            refund = min(esc, b["amount"])
+                            if refund > 0:
+                                users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                                st["escrow"][tuid] = esc - refund
+                                if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
+                            # ลบบิลฝั่งต่ำออก
+                            st["bet_index"].pop(tuid, None)
+                        st["totals"]["LO"] = 0
+                        save_users_persist()
+                    
+                    # บล็อกการแทงฝั่งต่ำในรอบนี้
+                    st["disabled_sides"].add("LO")
+                    
+                    names = ", ".join(b["name"] for b in lo_bets)
+                    safe_reply(event, TextSendMessage(
+                        f"✅ ประกาศราคา: {camp}\n"
+                        f"ล/ไม่มี ย{lo_amount}\n\n"
+                        f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}\n"
+                        f"🚫 ปิดรับแทงฝั่งต่ำในรอบนี้"
+                    )); return
             else:
                 # กลุ่ม: 1=camp,2=side,3=amount_min,4=amount_max,5=rate
                 camp    = m_announce_single.group(1).strip()

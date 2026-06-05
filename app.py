@@ -1784,7 +1784,7 @@ def flex_settle(pair_no, rows, footer_text,
             pl_color = "#10B981" if pl > 0 else ("#EF4444" if pl < 0 else "#E5E7EB")
 
             row_cols = [
-                {"type": "text", "text": r["name"],       "flex": 4, "size": "sm", "color": "#111827"},
+                {"type": "text", "text": (r.get("name") or "-"),       "flex": 4, "size": "sm", "color": "#111827"},
                 {"type": "text", "text": fmt(r["stake"]), "flex": 3, "size": "sm", "align": "end", "color": "#374151"},
                 {"type": "text", "text": _fmt_signed(pl), "flex": 3, "size": "sm", "align": "end", "color": pl_color},
             ]
@@ -1921,7 +1921,7 @@ def flex_scoreboard(history_list):
                 },
                 {
                     "type": "text",
-                    "text": camp_name,
+                    "text": camp_name or "-",
                     "flex": 5,
                     "size": "sm",
                     "color": "#111827",
@@ -3453,7 +3453,7 @@ def on_message(event: MessageEvent):
                     "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น"
                 )),
                 FlexSendMessage(
-                    alt_text="กดเข้าหลังบ้าน",
+                    alt_text="กดตรงนี้ ส่งสลิป + หลังบ้าน",
                     contents={
                         "type": "bubble",
                         "body": {
@@ -3467,7 +3467,7 @@ def on_message(event: MessageEvent):
                                     "color": "#16A34A",
                                     "action": {
                                         "type": "uri",
-                                        "label": "กดเข้าหลังบ้าน",
+                                        "label": "กดตรงนี้ ส่งสลิป + หลังบ้าน",
                                         "uri": DEPOSIT_URL
                                     }
                                 }

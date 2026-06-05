@@ -3618,7 +3618,7 @@ def on_message(event: MessageEvent):
                     "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น"
                 )),
                 FlexSendMessage(
-                    alt_text="กดตรงนี้ ส่งสลิป + หลังบ้าน ",
+                    alt_text="➡ กดตรงนี้ เพื่อส่งสลิป ⬅",
                     contents={
                         "type": "bubble",
                         "size": "kilo",
@@ -3634,7 +3634,7 @@ def on_message(event: MessageEvent):
                                     "height": "sm",
                                     "action": {
                                         "type": "uri",
-                                        "label": "➡ กดตรงนี้ ส่งสลิป + หลังบ้าน ⬅",
+                                        "label": "➡ กดตรงนี้ เพื่อส่งสลิป ⬅",
                                         "uri": DEPOSIT_URL
                                     }
                                 }

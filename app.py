@@ -189,8 +189,8 @@ MIDDLE_FEE  = float(os.getenv("MIDDLE_FEE",  "0.03"))   # หักเมื่�
 MIN_BET = int(os.getenv("MIN_BET", "30"))
 MAX_BET = int(os.getenv("MAX_BET", "5000"))
 USER_SIDE_CAP = {"HI": 5000, "LO": 5000}
-SIDE_CAP      = {"HI": 40000, "LO": 30000}
-ROUND_CAP     = 70000
+SIDE_CAP      = {"HI": 30000, "LO": 30000}
+ROUND_CAP     = 60000
 
 # ====== SIMPLE PER-USER COOLDOWN (anti-spam reply gap) ======
 REPLY_COOLDOWN_SEC = int(os.getenv("REPLY_COOLDOWN_SEC", "6"))
@@ -1535,59 +1535,28 @@ def text_bank():
 
 
 def flex_backoffice_button(url: str, label: str = "เปิดหน้าฝากเงิน"):
-    """ปุ่ม Flex สำหรับเปิดหน้าแจ้งฝาก/ฝากเงิน (ลิงก์ DEPOSIT_URL)
-
-    แก้ปัญหา NameError: flex_backoffice_button ไม่ถูกประกาศ
-    """
+    """ปุ่ม Flex สำหรับส่งสลิป + หลังบ้าน (ลิงก์ DEPOSIT_URL) - เวอร์ชันเล็ก"""
     u = (url or '').strip() or DEPOSIT_URL
-    # กันพิมพ์ลิงก์แบบไม่มี scheme
     if not re.match(r'^https?://', u, re.IGNORECASE):
         u = 'https://' + u.lstrip('/')
 
     return FlexSendMessage(
-        alt_text='ฝากเงิน/แจ้งโอน',
+        alt_text='ส่งสลิป + หลังบ้าน',
         contents={
             'type': 'bubble',
-            'size': 'mega',
-            'styles': {'body': {'backgroundColor': '#F3F4F6'}},
+            'size': 'kilo',
             'body': {
                 'type': 'box',
                 'layout': 'vertical',
-                'paddingAll': '12px',
+                'spacing': '6px',
+                'paddingAll': '8px',
                 'contents': [
                     {
-                        'type': 'box',
-                        'layout': 'vertical',
-                        'backgroundColor': '#FFFFFF',
-                        'cornerRadius': '16px',
-                        'paddingAll': '16px',
-                        'spacing': '10px',
-                        'contents': [
-                            {
-                                'type': 'text',
-                                'text': '💳 ฝากเงิน / แจ้งโอน',
-                                'weight': 'bold',
-                                'size': 'lg',
-                                'align': 'center',
-                                'color': '#111827'
-                            },
-                            {
-                                'type': 'text',
-                                'text': 'กดปุ่มด้านล่างเพื่อไปหน้าแจ้งฝาก/แนบสลิป',
-                                'size': 'sm',
-                                'align': 'center',
-                                'wrap': True,
-                                'color': '#6B7280'
-                            },
-                            {'type': 'separator', 'margin': 'md', 'color': '#E5E7EB'},
-                            {
-                                'type': 'button',
-                                'style': 'primary',
-                                'color': '#16A34A',
-                                'height': 'sm',
-                                'action': {'type': 'uri', 'label': label, 'uri': u}
-                            }
-                        ]
+                        'type': 'button',
+                        'style': 'primary',
+                        'color': '#16A34A',
+                        'height': 'sm',
+                        'action': {'type': 'uri', 'label': 'กดตรงนี้ ส่งสลิป + หลังบ้าน', 'uri': u}
                     }
                 ]
             }

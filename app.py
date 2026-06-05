@@ -1840,106 +1840,115 @@ def flex_settle(pair_no, rows, footer_text,
     )
 
 def flex_scoreboard(history_list):
-    # Mapping ผล: เปลี่ยนจากสีพื้นหลัง เป็นสีตัวอักษร (color)
+    # Mapping ผล → label + สีข้อความ + สีพื้นหลัง badge
     res_map = {
         # สูงชนะ
-        "ส1.7":    {"text": "สูง-70% ✅", "color": "#22C55E"},
-        "ส1.85":   {"text": "สูง-85% ✅", "color": "#22C55E"},
-        "ส1.95":   {"text": "สูง-95% ✅", "color": "#22C55E"},
-        "ส2":      {"text": "สูง-เต็ม ✅", "color": "#4ADE80"},
+        "ส":     {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส1.7":  {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส1.85": {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส1.95": {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส2":    {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#15803D"},
         # ต่ำชนะ
-        "ต1.7":    {"text": "ต่ำ-70% ❌", "color": "#EF4444"},
-        "ต1.85":   {"text": "ต่ำ-85% ❌", "color": "#EF4444"},
-        "ต1.95":   {"text": "ต่ำ-95% ❌", "color": "#EF4444"},
-        "ต2":      {"text": "ต่ำ-เต็ม ❌", "color": "#F87171"},
+        "ต":     {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต1.7":  {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต1.85": {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต1.95": {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต2":    {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#B91C1C"},
         # เสมอ
-        "เสมอสูง": {"text": "เสมอ🔵", "color": "#A855F7"},
-        "เสมอต่ำ": {"text": "เสมอ🔴", "color": "#A855F7"},
-        "เสมอ":    {"text": "เสมอ⛔", "color": "#A855F7"},
-        "เสมอ2":   {"text": "เสมอ2⛔", "color": "#6B21A8"},
+        "เสมอสูง": {"label": "เสมอสูง",  "tc": "#FFFFFF", "bg": "#7C3AED"},
+        "เสมอต่ำ": {"label": "เสมอต่ำ",  "tc": "#FFFFFF", "bg": "#7C3AED"},
+        "เสมอ":    {"label": "เสมอ",     "tc": "#FFFFFF", "bg": "#7C3AED"},
+        "เสมอ2":   {"label": "เสมอ2",    "tc": "#FFFFFF", "bg": "#4C1D95"},
         # จาว
-        "จ":   {"text": "จาว ⛔", "color": "#3B82F6"},
-        "จาว": {"text": "จาว ⛔", "color": "#3B82F6"},
-        "ม":   {"text": "เสมอ-หาย ⛔", "color": "#3B82F6"},
+        "จ":   {"label": "จาว",          "tc": "#FFFFFF", "bg": "#2563EB"},
+        "จาว": {"label": "จาว",          "tc": "#FFFFFF", "bg": "#2563EB"},
+        "ม":   {"label": "หาย",          "tc": "#FFFFFF", "bg": "#2563EB"},
         # สส
-        "สส":  {"text": "สส 💥", "color": "#6B21A8"},
+        "สส":  {"label": "สส 💥",        "tc": "#FFFFFF", "bg": "#374151"},
     }
 
-    # ===== 🔥 จุดแก้จริง: คัดเหลือผลล่าสุดต่อรอบ =====
     latest_by_round = {}
     for h in history_list or []:
         r = h.get("round")
         if r is None:
             continue
-        latest_by_round[r] = h   # ตัวหลังทับตัวก่อน (ผลล่าสุด)
+        latest_by_round[r] = h
 
-    # เรียงตามรอบ แล้วเอา 10 รอบล่าสุด
     recent = [latest_by_round[r] for r in sorted(latest_by_round)][-10:]
 
     rows = []
 
-    # --- ส่วนหัวตาราง ---
+    # หัวตาราง
     rows.append({
         "type": "box",
         "layout": "horizontal",
-        "paddingBottom": "10px",
+        "paddingBottom": "8px",
+        "paddingTop": "4px",
         "contents": [
-            {"type": "text", "text": "#", "flex": 1, "size": "xs", "color": "#6B7280", "align": "center"},
-            {"type": "text", "text": "ชื่อค่าย ", "flex": 3, "size": "xs", "color": "#6B7280", "offsetStart": "10px"},
-            {"type": "text", "text": "ผล ", "flex": 4, "size": "xs", "align": "center", "color": "#6B7280"},
+            {"type": "text", "text": "#",       "flex": 1, "size": "xs", "color": "#9CA3AF", "align": "center", "weight": "bold"},
+            {"type": "text", "text": "ชื่อค่าย","flex": 5, "size": "xs", "color": "#9CA3AF", "weight": "bold"},
+            {"type": "text", "text": "ผล",       "flex": 3, "size": "xs", "color": "#9CA3AF", "align": "center", "weight": "bold"},
         ]
     })
+    rows.append({"type": "separator", "color": "#E5E7EB", "margin": "none"})
 
-    # วนลูปสร้างแถวข้อมูล
     for idx, item in enumerate(recent):
         code_key = item.get('code', '?')
-
-        if code_key in res_map:
-            style = res_map[code_key]
-        else:
-            # fallback: แสดง code ตรงๆ
-            style = {"text": code_key[:8] if code_key else "?", "color": "#FFFFFF"}
-
+        style = res_map.get(code_key, {"label": code_key[:6] or "?", "tc": "#FFFFFF", "bg": "#6B7280"})
         camp_name = item.get('camp') or "-"
+        round_no = str(item.get('round', '-'))
 
         rows.append({
             "type": "box",
             "layout": "horizontal",
-            "paddingVertical": "8px",
+            "paddingVertical": "10px",
             "alignItems": "center",
             "contents": [
                 {
                     "type": "text",
-                    "text": str(item['round']),
+                    "text": round_no,
                     "flex": 1,
-                    "size": "xs",
-                    "color": "#9CA3AF",
-                    "align": "center"
+                    "size": "sm",
+                    "color": "#6B7280",
+                    "align": "center",
+                    "weight": "bold"
                 },
                 {
                     "type": "text",
                     "text": camp_name,
-                    "flex": 3,
+                    "flex": 5,
                     "size": "sm",
                     "color": "#111827",
                     "wrap": False,
-                    "offsetStart": "10px"
                 },
                 {
-                    "type": "text",
-                    "text": style['text'],
-                    "flex": 4,
-                    "color": style['color'],
-                    "weight": "bold",
-                    "align": "center",
-                    "size": "xxs" if len(style['text']) > 8 else "xs",
-                    "wrap": True
+                    "type": "box",
+                    "layout": "vertical",
+                    "flex": 3,
+                    "backgroundColor": style["bg"],
+                    "cornerRadius": "20px",
+                    "paddingTop": "5px",
+                    "paddingBottom": "5px",
+                    "paddingStart": "6px",
+                    "paddingEnd": "6px",
+                    "alignItems": "center",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": style["label"],
+                            "size": "xxs",
+                            "color": style["tc"],
+                            "weight": "bold",
+                            "align": "center",
+                            "wrap": False,
+                        }
+                    ]
                 }
             ]
         })
 
         if idx < len(recent) - 1:
-            rows.append({"type": "separator", "color": "#E5E7EB", "margin": "none"})
+            rows.append({"type": "separator", "color": "#F3F4F6", "margin": "none"})
 
     return FlexSendMessage(
         alt_text="สกอบั้งไฟล่าสุด",
@@ -1947,45 +1956,47 @@ def flex_scoreboard(history_list):
             "type": "bubble",
             "size": "mega",
             "styles": {
-                "header": {"backgroundColor": "#FFF7ED"},
-                "body": {"backgroundColor": "#FFFFFF"}
+                "header": {"backgroundColor": "#FFFFFF"},
+                "body":   {"backgroundColor": "#FFFFFF"}
             },
             "header": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingAll": "20px",
+                "paddingAll": "16px",
+                "borderColor": "#F3F4F6",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": "📜 สกอบั้งไฟ",
-                        "weight": "bold",
-                        "size": "lg",
-                        "color": "#EA580C",
-                        "align": "center"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "alignItems": "center",
+                        "contents": [
+                            {"type": "text", "text": "📜", "size": "xl", "flex": 0},
+                            {
+                                "type": "text",
+                                "text": " สกอบั้งไฟ",
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": "#111827",
+                                "flex": 1,
+                            }
+                        ]
                     }
                 ]
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingTop": "0px",
-                "contents": [
+                "paddingAll": "16px",
+                "paddingTop": "8px",
+                "spacing": "none",
+                "contents": rows if rows else [
                     {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": "#F9FAFB",
-                        "cornerRadius": "10px",
-                        "paddingAll": "12px",
-                        "contents": rows if rows else [
-                            {
-                                "type": "text",
-                                "text": "(ยังไม่มีประวัติ)",
-                                "align": "center",
-                                "color": "#6B7280",
-                                "size": "sm",
-                                "paddingAll": "20px"
-                            }
-                        ]
+                        "type": "text",
+                        "text": "ยังไม่มีประวัติ",
+                        "align": "center",
+                        "color": "#9CA3AF",
+                        "size": "sm",
+                        "paddingAll": "20px"
                     }
                 ]
             }

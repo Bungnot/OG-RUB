@@ -548,7 +548,7 @@ ADMIN_IDS = [s.strip() for s in os.getenv(
 
 BACKOFFICE_GROUP_IDS = {  # กลุ่มหลังบ้าน (รับสรุปพร้อมกำไรสุทธิ)
     gid.strip()
-    for gid in os.getenv("BACKOFFICE_GROUP_IDS", "Cc462daad00c0bc3e15560c86191954a8").split(",")
+    for gid in os.getenv("BACKOFFICE_GROUP_IDS", "C41cbefb9d903fb55c4eef651598b6513").split(",")
     if gid.strip()
 }
 

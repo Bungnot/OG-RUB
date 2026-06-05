@@ -2965,7 +2965,7 @@ def on_message(event: MessageEvent):
                 f"🕒 เวลา: {now}\n"
                 "💰 ยอดคงเหลือปัจจุบัน: 0"
             )
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_msg))
+            safe_reply(event, TextSendMessage(text=reply_msg))
             return
         
 
@@ -4306,26 +4306,8 @@ def on_image(event: MessageEvent):
             rooms[key] = start_state()
         st = rooms[key]
 
-    # ต้องมีข้อมูลผู้ใช้ก่อน (พิมพ์ add มาก่อน)
-    with with_users_lock():
-        u = users.get(uid)
-
-    if not u:
-        safe_reply(event, TextSendMessage("กรุณาพิมพ์ add เพื่อรับไอดีก่อน"))
-        return
-
-    # ตอบการ์ด C ของผู้ที่ส่งรูป
-    try:
-        safe_reply(event, flex_customer_card(st, u))
-    except Exception:
-        # กันตก ถ้า Flex error ให้ตอบข้อความธรรมดา โดยไม่ให้พังซ้ำถ้า u หาย
-        app.logger.exception("on_image flex_customer_card failed uid=%s", uid)
-        cid = u.get('cid', '-') if isinstance(u, dict) else '-'
-        name = u.get('name', 'ผู้เล่น') if isinstance(u, dict) else 'ผู้เล่น'
-        credit = u.get('credit', 0) if isinstance(u, dict) else 0
-        safe_reply(event, TextSendMessage(
-            f"ID {cid} • {name} • เครดิต {fmt(credit)} บ."
-        ))
+    # บอทเงียบเมื่อลูกค้าส่งรูป ไม่ตอบกลับ
+    return
 
 
 def current_camp(st):

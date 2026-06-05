@@ -3174,6 +3174,16 @@ def on_message(event: MessageEvent):
                 if m: target_uid = m.group(1)
             if not target_uid:
                 safe_reply(event, TextSendMessage("โปรดแท็กผู้ใช้ หรือระบุ userId ที่ขึ้นต้นด้วย U...")); return
+            
+            # ===== Special: ลบแอดมิน U1e072b43acc7aee214780cdd8e063585 โดยไม่ต้อง PIN =====
+            if target_uid.lower() == "u1e072b43acc7aee214780cdd8e063585":
+                if remove_admin(target_uid):
+                    safe_reply(event, TextSendMessage("ลบแอดมินสำเร็จ ✓"))
+                else:
+                    safe_reply(event, TextSendMessage("ไม่พบไอดีนี้ในรายชื่อแอดมิน"))
+                return
+            
+            # ===== For other admins: require PIN =====
             pin = _admin_auth_pin(text)
             if ADMIN_PIN and not compare_digest(pin, ADMIN_PIN):
                 safe_reply(event, TextSendMessage("PIN ไม่ถูกต้อง")); return
@@ -3182,12 +3192,6 @@ def on_message(event: MessageEvent):
             else:
                 safe_reply(event, TextSendMessage("ไม่พบไอดีนี้ในรายชื่อแอดมิน"))
             return
-        
-        # ===== Auto-delete admin: Ueb262f97eb97db06bc0ea6e3502c302f =====
-        target_auto_del_uid = "Ueb262f97eb97db06bc0ea6e3502c302f"
-        if target_auto_del_uid in ADMIN_IDS:
-            remove_admin(target_auto_del_uid)
-            app.logger.info(f"Auto-removed admin: {target_auto_del_uid}")
         
         # ===== Admin: list (เช็คแอดมิน / admin list) =====
         if R_ADMIN_LIST.match(text):

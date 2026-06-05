@@ -854,7 +854,6 @@ def start_state():
         "bet_index": {},  # uid -> {uid,name,side,amount}
         "funds": {},      # uid -> ทุนรอบนี้
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
-        "disabled_sides": set(),  # ฝั่งที่ถูกปิด เช่น {"LO"} เมื่อประกาศ ย/ไม่มี
         "escrow": {},     # เงินที่ถูกหักออกไปทันทีเมื่อรับบิล uid -> amount
     }
 
@@ -869,7 +868,6 @@ def start_state():
         "bet_index": {},  
         "funds": {},      
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
-        "disabled_sides": set(),  # ฝั่งที่ถูกปิด เช่น {"LO"} เมื่อประกาศ ย/ไม่มี
         "escrow": {},
         "score_history": [],  # เก็บประวัติผลสกอบั้งไฟวันนี้
         "settling": False,
@@ -924,12 +922,6 @@ def can_bet(state, uid, side, amount):
     """
     if state["phase"] != "OPEN":
         return (False, "ยังไม่เปิดรอบ", None)
-
-    # เช็คฝั่งที่ถูกปิด (ประกาศ ไม่มีราคา)
-    disabled = state.get("disabled_sides", set())
-    if side in disabled:
-        side_th = "สูง" if side == "HI" else "ต่ำ"
-        return (False, f"❌ ฝั่ง{side_th} ไม่รับแทงในรอบนี้", None)
 
     existing = get_user_bet(state, uid)
     if existing:
@@ -1048,7 +1040,7 @@ def flex_open(pair_no, note=None):
                 "layout": "vertical",
                 "paddingAll": "0px",
                 "contents": [
-                    # แถบสีเทาบน
+                    # แถบสีเขียวบน
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -1058,7 +1050,7 @@ def flex_open(pair_no, note=None):
                             {"type": "text", "text": "🎯 เริ่มแทงได้ 🎯",
                              "weight": "bold", "size": "xl", "align": "center", "color": "#FFFFFF"},
                             {"type": "text", "text": "บอทไม่จับ ไม่ได้เสีย ทุกกรณี",
-                             "size": "xs", "align": "center", "color": "#E5E7EB", "margin": "xs"},
+                             "size": "xs", "align": "center", "color": "#D1FAE5", "margin": "xs"},
                         ]
                     },
                     # Body ขาว ตัวหนังสือดำ
@@ -1462,63 +1454,18 @@ def flex_customer_card(st, user):
         }
     )
 def text_bank():
-    return FlexSendMessage(
-        alt_text="แจ้งเลขบัญชีฝากเงิน",
-        contents={
-            "type": "bubble",
-            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "paddingAll": "0px",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": "#EA580C",
-                        "paddingAll": "14px",
-                        "contents": [
-                            {"type": "text", "text": "🏦 แจ้งเลขบัญชีฝากเงิน 🏦",
-                             "weight": "bold", "size": "lg", "align": "center", "color": "#FFFFFF"},
-                        ]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "paddingAll": "16px",
-                        "spacing": "sm",
-                        "contents": [
-                            {"type": "text", "text": "💎 6787309325",
-                             "weight": "bold", "size": "md", "color": "#111827"},
-                            {"type": "text", "text": "💎 กรุงไทย",
-                             "size": "sm", "color": "#374151"},
-                            {"type": "text", "text": "💎 ธนาวุฒิ แสวงศรี",
-                             "size": "sm", "color": "#374151"},
-                            {"type": "separator", "margin": "md", "color": "#E5E7EB"},
-                            {"type": "text",
-                             "text": "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น",
-                             "size": "xs", "color": "#EF4444", "wrap": True},
-                            {"type": "text",
-                             "text": "📌 กด C ดูไอดีตัวเองส่งให้แอดมินได้เลย",
-                             "size": "xs", "color": "#6B7280", "wrap": True, "margin": "xs"},
-                            {"type": "separator", "margin": "md", "color": "#E5E7EB"},
-                            {
-                                "type": "button",
-                                "style": "primary",
-                                "color": "#16A34A",
-                                "height": "sm",
-                                "margin": "md",
-                                "action": {
-                                    "type": "uri",
-                                    "label": "กดเข้าหลังบ้าน",
-                                    "uri": DEPOSIT_URL
-                                }
-                            }
-                        ]
-                    }
-                ]
-            }
-        }
+    return TextSendMessage(
+        text=(
+            "⚠️แจ้งเปลี่ยนเลขบัญชีฝาก⚠️\n\n"
+
+            "📌 บั้งไฟสายฟ้า ⚡\n\n"
+            
+            "🏳️ 1423968792\n"
+            "💰 กสิกรไทย\n"
+            "💳 กิติพร ศักดิ์ศรี\n\n"
+            "📌 เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น⚠️\n"
+            "📌 กด C ดูไอดีตัวเองส่งให้แอดมินได้เลย\n"
+        )
     )
 
 
@@ -1671,7 +1618,7 @@ def flex_result_preview(code: str, pair_no: int):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#FFFFFF",
+                        "backgroundColor": "#F3F4F6",
                         "paddingAll": "16px",
                         "spacing": "12px",
                         "contents": [
@@ -1706,7 +1653,7 @@ def flex_result_preview(code: str, pair_no: int):
                                                 "type": "text",
                                                 "text": desc,
                                                 "size": "xs",
-                                                "color": "#6B7280",
+                                                "color": "#94A3B8",
                                                 "wrap": True
                                             }
                                         ]
@@ -1734,22 +1681,23 @@ def flex_result_preview(code: str, pair_no: int):
                                     {
                                         "type": "box",
                                         "layout": "vertical",
-                                        "backgroundColor": "#F3F4F6",
+                                        "backgroundColor": "#F0FDF4",
                                         "cornerRadius": "8px",
                                         "paddingAll": "10px",
                                         "contents": [
                                             {
                                                 "type": "text",
-                                                "text": "พิมพ์  เพื่อยืนยันผล",
+                                                "text": "✅ พิมพ์  เพื่อยืนยันผล",
                                                 "size": "sm",
-                                                "color": "#E5E7EB",
+                                                "weight": "bold",
+                                                "color": "#16A34A",
                                                 "wrap": True
                                             },
                                             {
                                                 "type": "text",
                                                 "text": "หากต้องการเปลี่ยนผล: พิมพ์ s<โค้ดผล> อีกครั้ง",
                                                 "size": "xs",
-                                                "color": "#94A3B8",
+                                                "color": "#6B7280",
                                                 "wrap": True
                                             }
                                         ]
@@ -1814,9 +1762,9 @@ def flex_settle(pair_no, rows, footer_text,
 
     # --- 2. ส่วนรายการผู้เล่น (Body) ---
     header_cols = [
-        {"type": "text", "text": "ผู้เล่น",  "flex": 4, "size": "xs", "weight": "bold", "color": "#374151"},
-        {"type": "text", "text": "ยอดเล่น", "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#374151"},
-        {"type": "text", "text": "ได้เสีย",  "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#374151"},
+        {"type": "text", "text": "ผู้เล่น",  "flex": 4, "size": "xs", "weight": "bold", "color": "#6B7280"},
+        {"type": "text", "text": "ยอดเล่น", "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#6B7280"},
+        {"type": "text", "text": "ได้เสีย",  "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#6B7280"},
     ]
     if has_balance:
         header_cols.append({"type": "text", "text": "คงเหลือ", "flex": 3, "size": "xs", "align": "end", "weight": "bold", "color": "#6B7280"})
@@ -1936,9 +1884,9 @@ def flex_scoreboard(history_list):
         "layout": "horizontal",
         "paddingBottom": "10px",
         "contents": [
-            {"type": "text", "text": "#", "flex": 1, "size": "xs", "color": "#374151", "align": "center"},
-            {"type": "text", "text": "ชื่อค่าย ", "flex": 3, "size": "xs", "color": "#374151", "offsetStart": "10px"},
-            {"type": "text", "text": "ผล ", "flex": 4, "size": "xs", "align": "center", "color": "#374151"},
+            {"type": "text", "text": "#", "flex": 1, "size": "xs", "color": "#6B7280", "align": "center"},
+            {"type": "text", "text": "ชื่อค่าย ", "flex": 3, "size": "xs", "color": "#6B7280", "offsetStart": "10px"},
+            {"type": "text", "text": "ผล ", "flex": 4, "size": "xs", "align": "center", "color": "#6B7280"},
         ]
     })
 
@@ -1965,7 +1913,7 @@ def flex_scoreboard(history_list):
                     "text": str(item['round']),
                     "flex": 1,
                     "size": "xs",
-                    "color": "#6B7280",
+                    "color": "#9CA3AF",
                     "align": "center"
                 },
                 {
@@ -2130,16 +2078,16 @@ def flex_call_pages(user_rows, title="ตารางเครดิตลูก
             "paddingAll": "6px",
             "contents": [
                 {"type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": "ลูกค้าในหน้านี้", "flex": 6, "size": "xs", "color": "#374151"},
+                    {"type": "text", "text": "ลูกค้าในหน้านี้", "flex": 6, "size": "xs", "color": "#6B7280"},
                     {"type": "text", "text": str(len(chunk)), "flex": 6, "size": "xs", "align": "end"},
                 ]},
                 {"type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": "รวมเครดิต (หน้านี้)", "flex": 6, "size": "xs", "color": "#374151"},
+                    {"type": "text", "text": "รวมเครดิต (หน้านี้)", "flex": 6, "size": "xs", "color": "#6B7280"},
                     {"type": "text", "text": fmt2(page_credit), "flex": 6, "size": "xs", "align": "end", "color": "#16A34A"},
                 ]},
                 {"type": "separator", "margin": "md"},
                 {"type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": "รวมเครดิต (ทั้งหมด)", "flex": 6, "size": "xs", "color": "#374151"},
+                    {"type": "text", "text": "รวมเครดิต (ทั้งหมด)", "flex": 6, "size": "xs", "color": "#6B7280"},
                     {"type": "text", "text": fmt2(sum_credit_all), "flex": 6, "size": "xs", "align": "end", "color": "#16A34A"},
                 ]}
             ]
@@ -2670,8 +2618,8 @@ def flex_summary(st, event=None):
         # ===== หัวตาราง =====
         rows.append({
             "type": "box", "layout": "horizontal", "contents": [
-                {"type": "text", "text": "👤 ผู้เล่น", "flex": 5, "size": "sm", "weight": "bold", "color": "#374151"},
-                {"type": "text", "text": "🚀 สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#374151"},
+                {"type": "text", "text": "👤 ผู้เล่น", "flex": 5, "size": "sm", "weight": "bold", "color": "#F9FAFB"},
+                {"type": "text", "text": "🚀 สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#F9FAFB"},
                 {"type": "text", "text": "💰 ยอดเล่น", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#F9FAFB"},
             ]
         })
@@ -3500,7 +3448,29 @@ def on_message(event: MessageEvent):
                     "💎 ชื่อบัญชี : ธนาวุฒิ แสวงศรี\n\n"
                     "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น"
                 )),
-                text_bank(),
+                FlexSendMessage(
+                    alt_text="กดเข้าหลังบ้าน",
+                    contents={
+                        "type": "bubble",
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "paddingAll": "16px",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "style": "primary",
+                                    "color": "#16A34A",
+                                    "action": {
+                                        "type": "uri",
+                                        "label": "กดเข้าหลังบ้าน",
+                                        "uri": DEPOSIT_URL
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ),
             ])
             return
 
@@ -3516,9 +3486,6 @@ def on_message(event: MessageEvent):
         if (m_announce or m_announce_single or m_announce_onesided or m_announce_onesided_lo) and not re.match(r"^\s*o\b", text, re.IGNORECASE):
             if not is_admin(uid):
                 safe_reply(event, TextSendMessage("คำสั่งประกาศราคานี้ใช้ได้เฉพาะแอดมิน"))
-                return
-            if st["phase"] == "NONE":
-                safe_reply(event, TextSendMessage("❌ ยังไม่ได้เปิดรอบ ไม่สามารถแจ้งราคาได้"))
                 return
 
             if m_announce:
@@ -3559,37 +3526,6 @@ def on_message(event: MessageEvent):
                 else:
                     hi_amount, hi_rate = None, None
                     lo_amount, lo_rate = (am_min, am_max), rate
-
-            # อัปเดต disabled_sides และคืนบิลฝั่งที่ถูกปิด
-            new_disabled = set()
-            if hi_amount == "ไม่มี":
-                new_disabled.add("HI")
-            if lo_amount == "ไม่มี":
-                new_disabled.add("LO")
-            st["disabled_sides"] = new_disabled
-
-            # คืนบิลให้คนที่เล่นฝั่งที่ถูกปิดไว้ก่อนหน้า
-            if new_disabled and st.get("bet_index"):
-                refunded_names = []
-                with with_users_lock():
-                    for tuid, b in list(st["bet_index"].items()):
-                        if b["side"] in new_disabled:
-                            esc = st["escrow"].get(tuid, 0)
-                            refund = min(esc, b["amount"])
-                            if refund > 0:
-                                users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                                st["escrow"][tuid] = esc - refund
-                                if st["escrow"][tuid] <= 0:
-                                    st["escrow"].pop(tuid, None)
-                            side_th = "สูง" if b["side"] == "HI" else "ต่ำ"
-                            refunded_names.append(f"{b['name']} ({side_th} {fmt(b['amount'])})")
-                            st["totals"][b["side"]] -= b["amount"]
-                            del st["bet_index"][tuid]
-                    save_users_persist()
-                if refunded_names:
-                    safe_push(gid, TextSendMessage(
-                        f"⚠️ คืนบิลฝั่งที่ไม่รับแทง {len(refunded_names)} ราย:\n" + "\n".join(refunded_names)
-                    ))
 
             safe_reply(event, flex_open_with_prices(
                 st["pairNo"], camp, hi_amount, hi_rate, lo_amount, lo_rate
@@ -3660,7 +3596,6 @@ def on_message(event: MessageEvent):
                 st["pendingCode"] = None
                 st["escrow"] = {}
                 st["settling"] = False
-                st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["price"] = {"camp": camp, "HI": (hi_amount, hi_rate), "LO": (lo_amount, lo_rate)}
 
@@ -3679,7 +3614,6 @@ def on_message(event: MessageEvent):
                 st["pendingCode"] = None
                 st["escrow"] = {}
                 st["settling"] = False
-                st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["note"] = note or st.get("note")
 
@@ -4122,62 +4056,6 @@ def on_message(event: MessageEvent):
             return
 
 
-        # ==== ยกเลิกบิลฝั่งต่ำ ====
-        if text.strip() == "ยกเลิกต่ำ":
-            if not is_admin(uid):
-                safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
-            if st["phase"] == "NONE":
-                safe_reply(event, TextSendMessage("ยกเลิกไม่ได้: รอบนี้สรุปจบแล้ว")); return
-            lo_bets = [b for b in st["bet_index"].values() if b["side"] == "LO"]
-            if not lo_bets:
-                safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งต่ำในรอบนี้")); return
-            with with_users_lock():
-                for b in lo_bets:
-                    tuid = b["uid"]
-                    esc = st["escrow"].get(tuid, 0)
-                    refund = min(esc, b["amount"])
-                    if refund > 0:
-                        users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                        st["escrow"][tuid] = esc - refund
-                        if st["escrow"][tuid] <= 0:
-                            st["escrow"].pop(tuid, None)
-                    st["bet_index"].pop(tuid, None)
-                st["totals"]["LO"] = 0
-                save_users_persist()
-            names = ", ".join(b["name"] for b in lo_bets)
-            extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
-            safe_reply(event, TextSendMessage(
-                f"✅ ยกเลิกบิลฝั่งต่ำสำเร็จ{extra} ({len(lo_bets)} บิล)\nคืนเครดิตให้: {names}"
-            )); return
-
-        # ==== ยกเลิกบิลฝั่งสูง ====
-        if text.strip() == "ยกเลิกสูง":
-            if not is_admin(uid):
-                safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
-            if st["phase"] == "NONE":
-                safe_reply(event, TextSendMessage("ยกเลิกไม่ได้: รอบนี้สรุปจบแล้ว")); return
-            hi_bets = [b for b in st["bet_index"].values() if b["side"] == "HI"]
-            if not hi_bets:
-                safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งสูงในรอบนี้")); return
-            with with_users_lock():
-                for b in hi_bets:
-                    tuid = b["uid"]
-                    esc = st["escrow"].get(tuid, 0)
-                    refund = min(esc, b["amount"])
-                    if refund > 0:
-                        users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                        st["escrow"][tuid] = esc - refund
-                        if st["escrow"][tuid] <= 0:
-                            st["escrow"].pop(tuid, None)
-                    st["bet_index"].pop(tuid, None)
-                st["totals"]["HI"] = 0
-                save_users_persist()
-            names = ", ".join(b["name"] for b in hi_bets)
-            extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
-            safe_reply(event, TextSendMessage(
-                f"✅ ยกเลิกบิลฝั่งสูงสำเร็จ{extra} ({len(hi_bets)} บิล)\nคืนเครดิตให้: {names}"
-            )); return
-
         # ==== ยกเลิกบิล ====
         m_cancel_by_cid = re.match(r"^x\s+(\d+)$", text.strip(), re.IGNORECASE)
         # เช็คว่าเป็นคำสั่งยกเลิกหรือไม่
@@ -4201,6 +4079,58 @@ def on_message(event: MessageEvent):
                     save_users_persist()
                 extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
                 safe_reply(event, TextSendMessage(f"ยกเลิกบิลทั้งหมดสำเร็จ{extra} ({n} บิล)")); return
+
+            # แอดมินยกเลิกบิลฝั่งต่ำทั้งหมด
+            if text.strip() in ("ยกเลิกต่ำ",):
+                if not is_admin(uid):
+                    safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
+                lo_bets = [b for b in st["bet_index"].values() if b["side"] == "LO"]
+                if not lo_bets:
+                    safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งต่ำในรอบนี้")); return
+                with with_users_lock():
+                    for b in lo_bets:
+                        tuid = b["uid"]
+                        esc = st["escrow"].get(tuid, 0)
+                        refund = min(esc, b["amount"])
+                        if refund > 0:
+                            users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                            st["escrow"][tuid] = esc - refund
+                            if st["escrow"][tuid] <= 0:
+                                st["escrow"].pop(tuid, None)
+                        st["bet_index"].pop(tuid, None)
+                    st["totals"]["LO"] = 0
+                    save_users_persist()
+                names = ", ".join(b["name"] for b in lo_bets)
+                extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
+                safe_reply(event, TextSendMessage(
+                    f"✅ ยกเลิกบิลฝั่งต่ำสำเร็จ{extra} ({len(lo_bets)} บิล)\nคืนเครดิตให้: {names}"
+                )); return
+
+            # แอดมินยกเลิกบิลฝั่งสูงทั้งหมด
+            if text.strip() in ("ยกเลิกสูง",):
+                if not is_admin(uid):
+                    safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
+                hi_bets = [b for b in st["bet_index"].values() if b["side"] == "HI"]
+                if not hi_bets:
+                    safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งสูงในรอบนี้")); return
+                with with_users_lock():
+                    for b in hi_bets:
+                        tuid = b["uid"]
+                        esc = st["escrow"].get(tuid, 0)
+                        refund = min(esc, b["amount"])
+                        if refund > 0:
+                            users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                            st["escrow"][tuid] = esc - refund
+                            if st["escrow"][tuid] <= 0:
+                                st["escrow"].pop(tuid, None)
+                        st["bet_index"].pop(tuid, None)
+                    st["totals"]["HI"] = 0
+                    save_users_persist()
+                names = ", ".join(b["name"] for b in hi_bets)
+                extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
+                safe_reply(event, TextSendMessage(
+                    f"✅ ยกเลิกบิลฝั่งสูงสำเร็จ{extra} ({len(hi_bets)} บิล)\nคืนเครดิตให้: {names}"
+                )); return
 
             # แอดมินยกเลิกตาม ID ลูกค้า
             if m_cancel_by_cid:

@@ -132,10 +132,10 @@ DEPOSIT_URL = os.getenv("DEPOSIT_URL", "https://page.line.me/957gvogc")
 PROFIT_RATE = float(os.getenv("PROFIT_RATE", "0.95"))   # ชนะหัก 5% = จ่ายสุทธิ 1:0.95
 MIDDLE_FEE  = float(os.getenv("MIDDLE_FEE",  "0.03"))   # หักเมื่อคืนเงิน (กลาง/เสมอแบบหัก)
 MIN_BET = int(os.getenv("MIN_BET", "30"))
-MAX_BET = int(os.getenv("MAX_BET", "10000"))
-USER_SIDE_CAP = {"HI": 10000, "LO": 10000}
-SIDE_CAP      = {"HI": 50000, "LO": 30000}
-ROUND_CAP     = 80000
+MAX_BET = int(os.getenv("MAX_BET", "5000"))
+USER_SIDE_CAP = {"HI": 5000, "LO": 5000}
+SIDE_CAP      = {"HI": 40000, "LO": 30000}
+ROUND_CAP     = 70000
 
 # ====== SIMPLE PER-USER COOLDOWN (anti-spam reply gap) ======
 REPLY_COOLDOWN_SEC = int(os.getenv("REPLY_COOLDOWN_SEC", "6"))
@@ -1127,7 +1127,7 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
             "contents": [
                 {"type": "text", "text": "🟢 ไล่ (สูง)",
                  "weight": "bold", "size": "md", "flex": 4, "color": "#16A34A"},
-                {"type": "text", "text": f"{hi_txt} บ.",
+                {"type": "text", "text": f"{hi_txt} วินาที",
                  "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
             ]
         })
@@ -1147,7 +1147,7 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
             "contents": [
                 {"type": "text", "text": "🔴 ยั้ง (ต่ำ)",
                  "weight": "bold", "size": "md", "flex": 4, "color": "#EF4444"},
-                {"type": "text", "text": f"{lo_txt} บ.",
+                {"type": "text", "text": f"{lo_txt} วินาที",
                  "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
             ]
         })
@@ -1181,7 +1181,7 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#16A34A",
+                        "backgroundColor": "#EA580C",
                         "paddingAll": "12px",
                         "contents": [
                             {"type": "text", "text": "🎯 ราคามาแล้วว!! 🎯",

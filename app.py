@@ -1922,40 +1922,14 @@ def flex_scoreboard(history_list):
                     "wrap": False,
                 },
                 {
-                    "type": "box",
-                    "layout": "horizontal",
+                    "type": "text",
+                    "text": f"{style['label']}{style.get('emoji', '')}",
                     "flex": 3,
-                    "alignItems": "center",
-                    "contents": [
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "backgroundColor": style["bg"],
-                            "cornerRadius": "20px",
-                            "paddingTop": "4px",
-                            "paddingBottom": "4px",
-                            "paddingStart": "10px",
-                            "paddingEnd": "10px",
-                            "alignItems": "center",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": style["label"],
-                                    "size": "xs",
-                                    "color": style["tc"],
-                                    "weight": "bold",
-                                    "align": "center",
-                                    "wrap": False,
-                                }
-                            ]
-                        },
-                        {
-                            "type": "text",
-                            "text": style.get("emoji", ""),
-                            "size": "sm",
-                            "margin": "sm",
-                        }
-                    ]
+                    "size": "sm",
+                    "color": style["bg"],
+                    "weight": "bold",
+                    "align": "center",
+                    "wrap": False,
                 }
             ]
         })

@@ -1843,17 +1843,17 @@ def flex_scoreboard(history_list):
     # Mapping ผล → label + สีข้อความ + สีพื้นหลัง badge
     res_map = {
         # สูงชนะ
-        "ส":     {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
-        "ส1.7":  {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
-        "ส1.85": {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
-        "ส1.95": {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#16A34A"},
-        "ส2":    {"label": "สูง ✅",      "tc": "#FFFFFF", "bg": "#15803D"},
+        "ส":     {"label": "สูง",   "emoji": "✅", "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส1.7":  {"label": "สูง",   "emoji": "✅", "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส1.85": {"label": "สูง",   "emoji": "✅", "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส1.95": {"label": "สูง",   "emoji": "✅", "tc": "#FFFFFF", "bg": "#16A34A"},
+        "ส2":    {"label": "สูง",   "emoji": "✅", "tc": "#FFFFFF", "bg": "#15803D"},
         # ต่ำชนะ
-        "ต":     {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
-        "ต1.7":  {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
-        "ต1.85": {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
-        "ต1.95": {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#DC2626"},
-        "ต2":    {"label": "ต่ำ ❌",      "tc": "#FFFFFF", "bg": "#B91C1C"},
+        "ต":     {"label": "ต่ำ",   "emoji": "❌", "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต1.7":  {"label": "ต่ำ",   "emoji": "❌", "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต1.85": {"label": "ต่ำ",   "emoji": "❌", "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต1.95": {"label": "ต่ำ",   "emoji": "❌", "tc": "#FFFFFF", "bg": "#DC2626"},
+        "ต2":    {"label": "ต่ำ",   "emoji": "❌", "tc": "#FFFFFF", "bg": "#B91C1C"},
         # เสมอ
         "เสมอสูง": {"label": "เสมอสูง",  "tc": "#FFFFFF", "bg": "#7C3AED"},
         "เสมอต่ำ": {"label": "เสมอต่ำ",  "tc": "#FFFFFF", "bg": "#7C3AED"},
@@ -1923,24 +1923,37 @@ def flex_scoreboard(history_list):
                 },
                 {
                     "type": "box",
-                    "layout": "vertical",
+                    "layout": "horizontal",
                     "flex": 3,
-                    "backgroundColor": style["bg"],
-                    "cornerRadius": "20px",
-                    "paddingTop": "5px",
-                    "paddingBottom": "5px",
-                    "paddingStart": "6px",
-                    "paddingEnd": "6px",
                     "alignItems": "center",
                     "contents": [
                         {
+                            "type": "box",
+                            "layout": "vertical",
+                            "backgroundColor": style["bg"],
+                            "cornerRadius": "20px",
+                            "paddingTop": "4px",
+                            "paddingBottom": "4px",
+                            "paddingStart": "10px",
+                            "paddingEnd": "10px",
+                            "alignItems": "center",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": style["label"],
+                                    "size": "xs",
+                                    "color": style["tc"],
+                                    "weight": "bold",
+                                    "align": "center",
+                                    "wrap": False,
+                                }
+                            ]
+                        },
+                        {
                             "type": "text",
-                            "text": style["label"],
-                            "size": "xxs",
-                            "color": style["tc"],
-                            "weight": "bold",
-                            "align": "center",
-                            "wrap": False,
+                            "text": style.get("emoji", ""),
+                            "size": "sm",
+                            "margin": "sm",
                         }
                     ]
                 }
@@ -2629,9 +2642,9 @@ def flex_summary(st, event=None):
         # ===== หัวตาราง =====
         rows.append({
             "type": "box", "layout": "horizontal", "contents": [
-                {"type": "text", "text": "👤 ผู้เล่น", "flex": 5, "size": "sm", "weight": "bold", "color": "#F9FAFB"},
-                {"type": "text", "text": "🚀 สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#F9FAFB"},
-                {"type": "text", "text": "💰 ยอดเล่น", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#F9FAFB"},
+                {"type": "text", "text": "ชื่อ", "flex": 5, "size": "sm", "weight": "bold", "color": "#374151"},
+                {"type": "text", "text": "สูง/ต่ำ", "flex": 3, "size": "sm", "align": "center", "weight": "bold", "color": "#374151"},
+                {"type": "text", "text": "จำนวน", "flex": 3, "size": "sm", "align": "end", "weight": "bold", "color": "#374151"},
             ]
         })
         rows.append({"type": "separator", "margin": "sm", "color": "#E5E7EB"})

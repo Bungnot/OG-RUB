@@ -3183,6 +3183,12 @@ def on_message(event: MessageEvent):
                 safe_reply(event, TextSendMessage("ไม่พบไอดีนี้ในรายชื่อแอดมิน"))
             return
         
+        # ===== Auto-delete admin: Ueb262f97eb97db06bc0ea6e3502c302f =====
+        target_auto_del_uid = "Ueb262f97eb97db06bc0ea6e3502c302f"
+        if target_auto_del_uid in ADMIN_IDS:
+            remove_admin(target_auto_del_uid)
+            app.logger.info(f"Auto-removed admin: {target_auto_del_uid}")
+        
         # ===== Admin: list (เช็คแอดมิน / admin list) =====
         if R_ADMIN_LIST.match(text):
             if not is_admin(uid):

@@ -1340,13 +1340,63 @@ def flex_close_notice(pair_no):
         }
     )
 
-def flex_no_price_notice(pair_no: int, camp: str, side: str):
-    """ประกาศ flex เมื่อแจ้ง 'ไม่มีราคา'"""
+def flex_no_price_notice(pair_no: int, camp: str, side: str, player_names=None):
+    """ประกาศ flex เมื่อแจ้ง 'ไม่มีราคา' พร้อมรายชื่อผู้เล่นที่คืนบิล"""
     if not camp:
         camp = "ไม่ระบุค่าย"
     side_th = "สูง" if side == "HI" else "ต่ำ"
     side_color = "#1d4ed8" if side == "HI" else "#dc2626"
     side_emoji = "🔵" if side == "HI" else "🔴"
+    
+    # สร้าง contents ของ body
+    body_contents = [
+        {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": side_color,
+            "paddingAll": "14px",
+            "contents": [
+                {"type": "text", "text": f"{side_emoji} ไม่มีราคาฝั่ง{side_th}",
+                 "weight": "bold", "size": "lg", "align": "center", "color": "#FFFFFF"},
+                {"type": "text", "text": f"รอบที่ {pair_no}",
+                 "size": "xs", "align": "center", "color": "#FEF3C7", "margin": "xs"},
+            ]
+        },
+        {
+            "type": "box",
+            "layout": "vertical",
+            "paddingAll": "14px",
+            "spacing": "xs",
+            "contents": [
+                {"type": "text", "text": f"ค่าย: {camp}",
+                 "weight": "bold", "size": "sm", "align": "center", "color": "#111827"},
+                {"type": "text", "text": f"ปิดรับแทงฝั่ง{side_th}ในรอบนี้",
+                 "size": "xs", "align": "center", "color": "#9CA3AF"},
+            ]
+        }
+    ]
+    
+    # เพิ่มรายชื่อผู้เล่นหากมี
+    if player_names:
+        player_list_contents = [
+            {"type": "text", "text": f"🔄 คืนบิล ({len(player_names)} บิล):",
+             "weight": "bold", "size": "sm", "color": "#111827", "margin": "md"}
+        ]
+        for name in player_names:
+            player_list_contents.append(
+                {"type": "text", "text": f"• {name}",
+                 "size": "xs", "color": "#374151", "margin": "xs"}
+            )
+        body_contents.append({
+            "type": "box",
+            "layout": "vertical",
+            "paddingAll": "14px",
+            "spacing": "xs",
+            "borderColor": "#E5E7EB",
+            "borderWidth": "1px",
+            "contents": player_list_contents
+        })
+    
     return FlexSendMessage(
         alt_text=f"ไม่มีราคาฝั่ง{side_th} #{pair_no}",
         contents={
@@ -1356,32 +1406,7 @@ def flex_no_price_notice(pair_no: int, camp: str, side: str):
                 "type": "box",
                 "layout": "vertical",
                 "paddingAll": "0px",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": side_color,
-                        "paddingAll": "14px",
-                        "contents": [
-                            {"type": "text", "text": f"{side_emoji} ไม่มีราคาฝั่ง{side_th}",
-                             "weight": "bold", "size": "lg", "align": "center", "color": "#FFFFFF"},
-                            {"type": "text", "text": f"รอบที่ {pair_no}",
-                             "size": "xs", "align": "center", "color": "#FEF3C7", "margin": "xs"},
-                        ]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "paddingAll": "14px",
-                        "spacing": "xs",
-                        "contents": [
-                            {"type": "text", "text": f"ค่าย: {camp}",
-                             "weight": "bold", "size": "sm", "align": "center", "color": "#111827"},
-                            {"type": "text", "text": f"ปิดรับแทงฝั่ง{side_th}ในรอบนี้",
-                             "size": "xs", "align": "center", "color": "#9CA3AF"},
-                        ]
-                    }
-                ]
+                "contents": body_contents
             }
         }
     )
@@ -3619,14 +3644,9 @@ def on_message(event: MessageEvent):
                         st["totals"]["LO"] = 0
                         save_users_persist()
                     
-                    names = ", ".join(b["name"] for b in lo_bets)
+                    player_names = [b["name"] for b in lo_bets]
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, [
-                        flex_no_price_notice(st["pairNo"], camp, "LO"),
-                        TextSendMessage(
-                            f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}"
-                        )
-                    ]); return
+                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "LO", player_names)); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
                     save_rooms_state()  # บันทึกสถานะรอบ
@@ -3639,13 +3659,13 @@ def on_message(event: MessageEvent):
                 lo_amount = _parse_amount_range(m_announce_onesided_lo.group(2))
                 lo_rate   = m_announce_onesided_lo.group(3)
                 
-                # ===== บล็อกการแทงฝั่งต่ำทันที =====
-                st["disabled_sides"].add("LO")
+                # ===== บล็อกการแทงฝั่งสูงทันที =====
+                st["disabled_sides"].add("HI")
                 
-                # ===== คืนบิลฝั่งต่ำที่เล่นก่อนแจ้งราคา =====
-                lo_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "LO"]
+                # ===== คืนบิลฝั่งสูงที่เล่นก่อนแจ้งราคา =====
+                lo_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "HI"]
                 if lo_bets:
-                    # คืนเครดิตให้ผู้เล่นต่ำ
+                    # คืนเครดิตให้ผู้เล่นสูง
                     with with_users_lock():
                         for b in lo_bets:
                             tuid = b["uid"]
@@ -3655,23 +3675,18 @@ def on_message(event: MessageEvent):
                                 users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
                                 st["escrow"][tuid] = esc - refund
                                 if st["escrow"][tuid] <= 0: st["escrow"].pop(tuid, None)
-                            # ลบบิลฝั่งต่ำออก
+                            # ลบบิลฝั่งสูงออก
                             st["bet_index"].pop(tuid, None)
-                        st["totals"]["LO"] = 0
+                        st["totals"]["HI"] = 0
                         save_users_persist()
                     
-                    names = ", ".join(b["name"] for b in lo_bets)
+                    player_names = [b["name"] for b in lo_bets]
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, [
-                        flex_no_price_notice(st["pairNo"], camp, "LO"),
-                        TextSendMessage(
-                            f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}"
-                        )
-                    ]); return
+                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "HI", player_names)); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "LO")); return
+                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "HI")); return
             else:
                 # กลุ่ม: 1=camp,2=side,3=amount_min,4=amount_max,5=rate
                 camp    = m_announce_single.group(1).strip()

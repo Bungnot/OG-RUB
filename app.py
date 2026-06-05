@@ -3574,6 +3574,7 @@ def on_message(event: MessageEvent):
                         save_users_persist()
                     
                     names = ", ".join(b["name"] for b in hi_bets)
+                    save_rooms_state()  # บันทึกสถานะรอบ
                     safe_reply(event, TextSendMessage(
                         f"✅ ประกาศราคา: {camp}\n"
                         f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
@@ -3582,6 +3583,7 @@ def on_message(event: MessageEvent):
                     )); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
+                    save_rooms_state()  # บันทึกสถานะรอบ
                     safe_reply(event, TextSendMessage(
                         f"✅ ประกาศราคา: {camp}\n"
                         f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
@@ -3617,6 +3619,7 @@ def on_message(event: MessageEvent):
                         save_users_persist()
                     
                     names = ", ".join(b["name"] for b in lo_bets)
+                    save_rooms_state()  # บันทึกสถานะรอบ
                     safe_reply(event, TextSendMessage(
                         f"✅ ประกาศราคา: {camp}\n"
                         f"ล/ไม่มี ย{lo_amount}\n\n"
@@ -3625,6 +3628,7 @@ def on_message(event: MessageEvent):
                     )); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
+                    save_rooms_state()  # บันทึกสถานะรอบ
                     safe_reply(event, TextSendMessage(
                         f"✅ ประกาศราคา: {camp}\n"
                         f"ล/ไม่มี ย{lo_amount}\n\n"

@@ -1,5 +1,5 @@
 flask
-line-bot-sdk
 waitress
-python-dotenv
-orjson
+line-bot-sdk
+requests
+gunicorn

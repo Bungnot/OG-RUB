@@ -1052,7 +1052,7 @@ def flex_open(pair_no, note=None):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#EA580C",
+                        "backgroundColor": "#16A34A",
                         "paddingAll": "16px",
                         "contents": [
                             {"type": "text", "text": "🎯 เริ่มแทงได้ 🎯",
@@ -1638,7 +1638,7 @@ def flex_result_preview(code: str, pair_no: int):
         icon   = "⚠️"
         desc   = "ตรวจสอบรหัสผลอีกครั้ง"
 
-    text_color = "#10B981" if special == "DRAW_0" else "#E5E7EB"
+    text_color = "#16A34A" if special == "DRAW_0" else "#111827"
 
     return FlexSendMessage(
         alt_text=f"สรุปผล: {title}",
@@ -1663,7 +1663,7 @@ def flex_result_preview(code: str, pair_no: int):
                                 "weight": "bold",
                                 "size": "lg",
                                 "align": "center",
-                                "color": "#0B1220"
+                                "color": "#FFFFFF"
                             }
                         ]
                     },
@@ -1671,7 +1671,7 @@ def flex_result_preview(code: str, pair_no: int):
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "backgroundColor": "#F3F4F6",
+                        "backgroundColor": "#FFFFFF",
                         "paddingAll": "16px",
                         "spacing": "12px",
                         "contents": [
@@ -1706,7 +1706,7 @@ def flex_result_preview(code: str, pair_no: int):
                                                 "type": "text",
                                                 "text": desc,
                                                 "size": "xs",
-                                                "color": "#94A3B8",
+                                                "color": "#6B7280",
                                                 "wrap": True
                                             }
                                         ]
@@ -1716,7 +1716,7 @@ def flex_result_preview(code: str, pair_no: int):
                                 "cornerRadius": "10px"
                             },
 
-                            {"type": "separator", "color": "#334155"},
+                            {"type": "separator", "color": "#E5E7EB"},
 
                             # Quick tips
                             {
@@ -1729,12 +1729,12 @@ def flex_result_preview(code: str, pair_no: int):
                                         "text": "ขั้นตอนถัดไป",
                                         "size": "sm",
                                         "weight": "bold",
-                                        "color": "#CBD5E1"
+                                        "color": "#374151"
                                     },
                                     {
                                         "type": "box",
                                         "layout": "vertical",
-                                        "backgroundColor": "#111827",
+                                        "backgroundColor": "#F3F4F6",
                                         "cornerRadius": "8px",
                                         "paddingAll": "10px",
                                         "contents": [
@@ -1999,7 +1999,7 @@ def flex_scoreboard(history_list):
             "type": "bubble",
             "size": "mega",
             "styles": {
-                "header": {"backgroundColor": "#FFFFFF"},
+                "header": {"backgroundColor": "#FFF7ED"},
                 "body": {"backgroundColor": "#FFFFFF"}
             },
             "header": {
@@ -2012,7 +2012,7 @@ def flex_scoreboard(history_list):
                         "text": "📜 สกอบั้งไฟ",
                         "weight": "bold",
                         "size": "lg",
-                        "color": "#111827",
+                        "color": "#EA580C",
                         "align": "center"
                     }
                 ]
@@ -3492,7 +3492,16 @@ def on_message(event: MessageEvent):
 
         if text.strip().lower() in ("บช", "บัญชี", "เลขบัญชี"):
             # ส่ง "ข้อความอย่างเดียว" ไม่ส่งปุ่ม Flex
-            safe_reply(event, text_bank())
+            safe_reply(event, [
+                TextSendMessage(text=(
+                    "⚠️ แจ้งเลขบัญชีฝากเงิน ⚠️\n\n"
+                    "💎 เลขบัญชี : 6787309325\n"
+                    "💎 ธนาคาร : กรุงไทย\n"
+                    "💎 ชื่อบัญชี : ธนาวุฒิ แสวงศรี\n\n"
+                    "⚠️ เพื่อป้องกันมิจฉาชีพ ชื่อผู้ฝาก-ถอน ต้องเป็นชื่อเดียวกันเท่านั้น"
+                )),
+                text_bank(),
+            ])
             return
 
         if text == "กต":

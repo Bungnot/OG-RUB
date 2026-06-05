@@ -1340,6 +1340,52 @@ def flex_close_notice(pair_no):
         }
     )
 
+def flex_no_price_notice(pair_no: int, camp: str, side: str):
+    """ประกาศ flex เมื่อแจ้ง 'ไม่มีราคา'"""
+    if not camp:
+        camp = "ไม่ระบุค่าย"
+    side_th = "สูง" if side == "HI" else "ต่ำ"
+    side_color = "#1d4ed8" if side == "HI" else "#dc2626"
+    side_emoji = "🔵" if side == "HI" else "🔴"
+    return FlexSendMessage(
+        alt_text=f"ไม่มีราคาฝั่ง{side_th} #{pair_no}",
+        contents={
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": "#FFFFFF"}},
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "0px",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": side_color,
+                        "paddingAll": "14px",
+                        "contents": [
+                            {"type": "text", "text": f"{side_emoji} ไม่มีราคาฝั่ง{side_th}",
+                             "weight": "bold", "size": "lg", "align": "center", "color": "#FFFFFF"},
+                            {"type": "text", "text": f"รอบที่ {pair_no}",
+                             "size": "xs", "align": "center", "color": "#FEF3C7", "margin": "xs"},
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "paddingAll": "14px",
+                        "spacing": "xs",
+                        "contents": [
+                            {"type": "text", "text": f"ค่าย: {camp}",
+                             "weight": "bold", "size": "sm", "align": "center", "color": "#111827"},
+                            {"type": "text", "text": f"ปิดรับแทงฝั่ง{side_th}ในรอบนี้",
+                             "size": "xs", "align": "center", "color": "#9CA3AF"},
+                        ]
+                    }
+                ]
+            }
+        }
+    )
+
 def flex_pause_notice(pair_no: int, camp: str):
     if not camp:
         camp = "ไม่ระบุค่าย"
@@ -3575,20 +3621,16 @@ def on_message(event: MessageEvent):
                     
                     names = ", ".join(b["name"] for b in hi_bets)
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, TextSendMessage(
-                        f"✅ ประกาศราคา: {camp}\n"
-                        f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
-                        f"🔄 คืนบิลฝั่งสูง ({len(hi_bets)} บิล): {names}\n"
-                        f"🚫 ปิดรับแทงฝั่งสูงในรอบนี้"
-                    )); return
+                    safe_reply(event, [
+                        flex_no_price_notice(st["pairNo"], camp, "HI"),
+                        TextSendMessage(
+                            f"🔄 คืนบิลฝั่งสูง ({len(hi_bets)} บิล): {names}"
+                        )
+                    ]); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, TextSendMessage(
-                        f"✅ ประกาศราคา: {camp}\n"
-                        f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
-                        f"🚫 ปิดรับแทงฝั่งสูงในรอบนี้"
-                    )); return
+                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "HI")); return
             elif m_announce_onesided_lo:
                 # ล/ไม่มี ย300/1.85
                 camp      = m_announce_onesided_lo.group(1).strip()
@@ -3620,20 +3662,16 @@ def on_message(event: MessageEvent):
                     
                     names = ", ".join(b["name"] for b in lo_bets)
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, TextSendMessage(
-                        f"✅ ประกาศราคา: {camp}\n"
-                        f"ล/ไม่มี ย{lo_amount}\n\n"
-                        f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}\n"
-                        f"🚫 ปิดรับแทงฝั่งต่ำในรอบนี้"
-                    )); return
+                    safe_reply(event, [
+                        flex_no_price_notice(st["pairNo"], camp, "LO"),
+                        TextSendMessage(
+                            f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}"
+                        )
+                    ]); return
                 else:
                     # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
                     save_rooms_state()  # บันทึกสถานะรอบ
-                    safe_reply(event, TextSendMessage(
-                        f"✅ ประกาศราคา: {camp}\n"
-                        f"ล/ไม่มี ย{lo_amount}\n\n"
-                        f"🚫 ปิดรับแทงฝั่งต่ำในรอบนี้"
-                    )); return
+                    safe_reply(event, flex_no_price_notice(st["pairNo"], camp, "LO")); return
             else:
                 # กลุ่ม: 1=camp,2=side,3=amount_min,4=amount_max,5=rate
                 camp    = m_announce_single.group(1).strip()

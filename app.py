@@ -260,7 +260,41 @@ def settle_payload_to_text(p: dict) -> str:
 
 
 USERS_JSON = os.path.join(DATA_DIR, "users.json")
+ROOMS_STATE_JSON = os.path.join(DATA_DIR, "rooms_state.json")
 _user_store_lock = threading.Lock()
+_rooms_state_lock = threading.Lock()
+
+def save_rooms_state():
+    """บันทึกสถานะรอบทั้งหมดลงไฟล์"""
+    try:
+        with _rooms_state_lock:
+            rooms_copy = {}
+            for key, st in rooms.items():
+                st_copy = st.copy()
+                st_copy["disabled_sides"] = list(st_copy.get("disabled_sides", set()))
+                rooms_copy[key] = st_copy
+            _atomic_write_json(ROOMS_STATE_JSON, {"rooms": rooms_copy, "ts": time.time()})
+    except Exception as e:
+        app.logger.exception(f"save_rooms_state failed: {e}")
+
+def load_rooms_state():
+    """โหลดสถานะรอบจากไฟล์"""
+    global rooms
+    try:
+        if not os.path.exists(ROOMS_STATE_JSON):
+            return
+        with _rooms_state_lock:
+            with open(ROOMS_STATE_JSON, "rb") as f:
+                data = _loads_bytes(f.read())
+        
+        saved_rooms = data.get("rooms", {})
+        for key, st in saved_rooms.items():
+            if key not in rooms:
+                st["disabled_sides"] = set(st.get("disabled_sides", []))
+                rooms[key] = st
+    except Exception as e:
+        app.logger.exception(f"load_rooms_state failed: {e}")
+
 
 
 # --- JSON encoder/decoder with orjson fallback ---
@@ -662,6 +696,8 @@ threading.Thread(target=_persist_worker, daemon=True).start()
 # โหลดข้อมูลลูกค้า+เครดิตจากดิสก์ (ถ้ามี)
 load_users_persist()
 
+# โหลดสถานะรอบที่เปิดอยู่ (ถ้ามี)
+load_rooms_state()
 
 # ====== AUTO DELETE: ลบไฟล์ Backup_round เมื่อครบ 1 วัน แบบไม่ต้องเช็คทุกชั่วโมง ======
 # วิธีทำงาน:
@@ -3516,7 +3552,10 @@ def on_message(event: MessageEvent):
                 lo_amount = "ไม่มี"
                 lo_rate   = None
                 
-                # ===== คืนบิลและบล็อกฝั่งสูง เมื่อแจ้ง "ไม่มีราคา" =====
+                # ===== บล็อกการแทงฝั่งสูงทันที =====
+                st["disabled_sides"].add("HI")
+                
+                # ===== คืนบิลฝั่งสูงที่เล่นก่อนแจ้งราคา =====
                 hi_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "HI"]
                 if hi_bets:
                     # คืนเครดิตให้ผู้เล่นสูง
@@ -3534,14 +3573,18 @@ def on_message(event: MessageEvent):
                         st["totals"]["HI"] = 0
                         save_users_persist()
                     
-                    # บล็อกการแทงฝั่งสูงในรอบนี้
-                    st["disabled_sides"].add("HI")
-                    
                     names = ", ".join(b["name"] for b in hi_bets)
                     safe_reply(event, TextSendMessage(
                         f"✅ ประกาศราคา: {camp}\n"
                         f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
                         f"🔄 คืนบิลฝั่งสูง ({len(hi_bets)} บิล): {names}\n"
+                        f"🚫 ปิดรับแทงฝั่งสูงในรอบนี้"
+                    )); return
+                else:
+                    # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
+                    safe_reply(event, TextSendMessage(
+                        f"✅ ประกาศราคา: {camp}\n"
+                        f"ล{hi_amount}/{hi_rate} ย/ไม่มี\n\n"
                         f"🚫 ปิดรับแทงฝั่งสูงในรอบนี้"
                     )); return
             elif m_announce_onesided_lo:
@@ -3552,7 +3595,10 @@ def on_message(event: MessageEvent):
                 lo_amount = _parse_amount_range(m_announce_onesided_lo.group(2))
                 lo_rate   = m_announce_onesided_lo.group(3)
                 
-                # ===== คืนบิลและบล็อกฝั่งต่ำ เมื่อแจ้ง "ไม่มีราคา" =====
+                # ===== บล็อกการแทงฝั่งต่ำทันที =====
+                st["disabled_sides"].add("LO")
+                
+                # ===== คืนบิลฝั่งต่ำที่เล่นก่อนแจ้งราคา =====
                 lo_bets = [b for b in st.get("bet_index", {}).values() if b["side"] == "LO"]
                 if lo_bets:
                     # คืนเครดิตให้ผู้เล่นต่ำ
@@ -3570,14 +3616,18 @@ def on_message(event: MessageEvent):
                         st["totals"]["LO"] = 0
                         save_users_persist()
                     
-                    # บล็อกการแทงฝั่งต่ำในรอบนี้
-                    st["disabled_sides"].add("LO")
-                    
                     names = ", ".join(b["name"] for b in lo_bets)
                     safe_reply(event, TextSendMessage(
                         f"✅ ประกาศราคา: {camp}\n"
                         f"ล/ไม่มี ย{lo_amount}\n\n"
                         f"🔄 คืนบิลฝั่งต่ำ ({len(lo_bets)} บิล): {names}\n"
+                        f"🚫 ปิดรับแทงฝั่งต่ำในรอบนี้"
+                    )); return
+                else:
+                    # ไม่มีบิลเก่า แต่ยังคงบล็อกการเดิมพันใหม่
+                    safe_reply(event, TextSendMessage(
+                        f"✅ ประกาศราคา: {camp}\n"
+                        f"ล/ไม่มี ย{lo_amount}\n\n"
                         f"🚫 ปิดรับแทงฝั่งต่ำในรอบนี้"
                     )); return
             else:
@@ -3666,6 +3716,7 @@ def on_message(event: MessageEvent):
                 st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["price"] = {"camp": camp, "HI": (hi_amount, hi_rate), "LO": (lo_amount, lo_rate)}
+                save_rooms_state()  # บันทึกสถานะรอบ
 
                 safe_reply(event, flex_open_with_prices(
                     st["pairNo"], camp, hi_amount, hi_rate, lo_amount, lo_rate
@@ -3685,6 +3736,7 @@ def on_message(event: MessageEvent):
                 st["disabled_sides"] = set()
                 st["phase"] = "OPEN"
                 st["note"] = note or st.get("note")
+                save_rooms_state()  # บันทึกสถานะรอบ
 
                 safe_reply(event, flex_open(st["pairNo"], st.get("note"))); return
 
@@ -3709,8 +3761,9 @@ def on_message(event: MessageEvent):
             st["phase"] = "PAUSED"
             st["last_closed_pairNo"] = st["pairNo"]
             camp = current_camp(st)
+            save_rooms_state()  # บันทึกสถานะรอบ
 
-            # ส่ง 2 ข้อความ: (1) การ์ดพักรอบ (2) สรุปบิล
+            # ส่ง 2 ข้อความ: (1) การ์พักรอบ (2) สรุปบิล
             try:
                 safe_reply(event, [
                     flex_pause_notice(st["pairNo"], camp),
@@ -3876,6 +3929,7 @@ def on_message(event: MessageEvent):
             st["bet_index"].clear()
             st["totals"] = {"HI": 0, "LO": 0}
             st["escrow"].clear()
+            save_rooms_state()  # บันทึกสถานะรอบ
 
             # ถ้ารอบนี้เคยถูกย้อนแล้ว และตอนนี้ออกผลใหม่สำเร็จแล้ว
             # ให้ปลดล็อก rollback/pending snapshot เพื่อให้ย้อนผลรอบนี้ได้อีกครั้งเฉพาะหลังออกผลใหม่เท่านั้น

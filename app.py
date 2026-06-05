@@ -854,6 +854,7 @@ def start_state():
         "bet_index": {},  # uid -> {uid,name,side,amount}
         "funds": {},      # uid -> ทุนรอบนี้
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
+        "disabled_sides": set(),  # ฝั่งที่ถูกปิด เช่น {"LO"} เมื่อประกาศ ย/ไม่มี
         "escrow": {},     # เงินที่ถูกหักออกไปทันทีเมื่อรับบิล uid -> amount
     }
 
@@ -868,6 +869,7 @@ def start_state():
         "bet_index": {},  
         "funds": {},      
         "price": {"camp": None, "HI": (None, None), "LO": (None, None)},
+        "disabled_sides": set(),  # ฝั่งที่ถูกปิด เช่น {"LO"} เมื่อประกาศ ย/ไม่มี
         "escrow": {},
         "score_history": [],  # เก็บประวัติผลสกอบั้งไฟวันนี้
         "settling": False,
@@ -922,6 +924,12 @@ def can_bet(state, uid, side, amount):
     """
     if state["phase"] != "OPEN":
         return (False, "ยังไม่เปิดรอบ", None)
+
+    # เช็คฝั่งที่ถูกปิด (ประกาศ ไม่มีราคา)
+    disabled = state.get("disabled_sides", set())
+    if side in disabled:
+        side_th = "สูง" if side == "HI" else "ต่ำ"
+        return (False, f"❌ ฝั่ง{side_th} ไม่รับแทงในรอบนี้", None)
 
     existing = get_user_bet(state, uid)
     if existing:
@@ -3495,6 +3503,37 @@ def on_message(event: MessageEvent):
                     hi_amount, hi_rate = None, None
                     lo_amount, lo_rate = (am_min, am_max), rate
 
+            # อัปเดต disabled_sides และคืนบิลฝั่งที่ถูกปิด
+            new_disabled = set()
+            if hi_amount == "ไม่มี":
+                new_disabled.add("HI")
+            if lo_amount == "ไม่มี":
+                new_disabled.add("LO")
+            st["disabled_sides"] = new_disabled
+
+            # คืนบิลให้คนที่เล่นฝั่งที่ถูกปิดไว้ก่อนหน้า
+            if new_disabled and st.get("bet_index"):
+                refunded_names = []
+                with with_users_lock():
+                    for tuid, b in list(st["bet_index"].items()):
+                        if b["side"] in new_disabled:
+                            esc = st["escrow"].get(tuid, 0)
+                            refund = min(esc, b["amount"])
+                            if refund > 0:
+                                users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                                st["escrow"][tuid] = esc - refund
+                                if st["escrow"][tuid] <= 0:
+                                    st["escrow"].pop(tuid, None)
+                            side_th = "สูง" if b["side"] == "HI" else "ต่ำ"
+                            refunded_names.append(f"{b['name']} ({side_th} {fmt(b['amount'])})")
+                            st["totals"][b["side"]] -= b["amount"]
+                            del st["bet_index"][tuid]
+                    save_users_persist()
+                if refunded_names:
+                    safe_push(gid, TextSendMessage(
+                        f"⚠️ คืนบิลฝั่งที่ไม่รับแทง {len(refunded_names)} ราย:\n" + "\n".join(refunded_names)
+                    ))
+
             safe_reply(event, flex_open_with_prices(
                 st["pairNo"], camp, hi_amount, hi_rate, lo_amount, lo_rate
             )); return
@@ -4024,6 +4063,62 @@ def on_message(event: MessageEvent):
             return
 
 
+        # ==== ยกเลิกบิลฝั่งต่ำ ====
+        if text.strip() == "ยกเลิกต่ำ":
+            if not is_admin(uid):
+                safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
+            if st["phase"] == "NONE":
+                safe_reply(event, TextSendMessage("ยกเลิกไม่ได้: รอบนี้สรุปจบแล้ว")); return
+            lo_bets = [b for b in st["bet_index"].values() if b["side"] == "LO"]
+            if not lo_bets:
+                safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งต่ำในรอบนี้")); return
+            with with_users_lock():
+                for b in lo_bets:
+                    tuid = b["uid"]
+                    esc = st["escrow"].get(tuid, 0)
+                    refund = min(esc, b["amount"])
+                    if refund > 0:
+                        users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                        st["escrow"][tuid] = esc - refund
+                        if st["escrow"][tuid] <= 0:
+                            st["escrow"].pop(tuid, None)
+                    st["bet_index"].pop(tuid, None)
+                st["totals"]["LO"] = 0
+                save_users_persist()
+            names = ", ".join(b["name"] for b in lo_bets)
+            extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
+            safe_reply(event, TextSendMessage(
+                f"✅ ยกเลิกบิลฝั่งต่ำสำเร็จ{extra} ({len(lo_bets)} บิล)\nคืนเครดิตให้: {names}"
+            )); return
+
+        # ==== ยกเลิกบิลฝั่งสูง ====
+        if text.strip() == "ยกเลิกสูง":
+            if not is_admin(uid):
+                safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
+            if st["phase"] == "NONE":
+                safe_reply(event, TextSendMessage("ยกเลิกไม่ได้: รอบนี้สรุปจบแล้ว")); return
+            hi_bets = [b for b in st["bet_index"].values() if b["side"] == "HI"]
+            if not hi_bets:
+                safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งสูงในรอบนี้")); return
+            with with_users_lock():
+                for b in hi_bets:
+                    tuid = b["uid"]
+                    esc = st["escrow"].get(tuid, 0)
+                    refund = min(esc, b["amount"])
+                    if refund > 0:
+                        users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                        st["escrow"][tuid] = esc - refund
+                        if st["escrow"][tuid] <= 0:
+                            st["escrow"].pop(tuid, None)
+                    st["bet_index"].pop(tuid, None)
+                st["totals"]["HI"] = 0
+                save_users_persist()
+            names = ", ".join(b["name"] for b in hi_bets)
+            extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
+            safe_reply(event, TextSendMessage(
+                f"✅ ยกเลิกบิลฝั่งสูงสำเร็จ{extra} ({len(hi_bets)} บิล)\nคืนเครดิตให้: {names}"
+            )); return
+
         # ==== ยกเลิกบิล ====
         m_cancel_by_cid = re.match(r"^x\s+(\d+)$", text.strip(), re.IGNORECASE)
         # เช็คว่าเป็นคำสั่งยกเลิกหรือไม่
@@ -4047,58 +4142,6 @@ def on_message(event: MessageEvent):
                     save_users_persist()
                 extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
                 safe_reply(event, TextSendMessage(f"ยกเลิกบิลทั้งหมดสำเร็จ{extra} ({n} บิล)")); return
-
-            # แอดมินยกเลิกบิลฝั่งต่ำทั้งหมด
-            if text.strip() in ("ยกเลิกต่ำ",):
-                if not is_admin(uid):
-                    safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
-                lo_bets = [b for b in st["bet_index"].values() if b["side"] == "LO"]
-                if not lo_bets:
-                    safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งต่ำในรอบนี้")); return
-                with with_users_lock():
-                    for b in lo_bets:
-                        tuid = b["uid"]
-                        esc = st["escrow"].get(tuid, 0)
-                        refund = min(esc, b["amount"])
-                        if refund > 0:
-                            users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                            st["escrow"][tuid] = esc - refund
-                            if st["escrow"][tuid] <= 0:
-                                st["escrow"].pop(tuid, None)
-                        st["bet_index"].pop(tuid, None)
-                    st["totals"]["LO"] = 0
-                    save_users_persist()
-                names = ", ".join(b["name"] for b in lo_bets)
-                extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
-                safe_reply(event, TextSendMessage(
-                    f"✅ ยกเลิกบิลฝั่งต่ำสำเร็จ{extra} ({len(lo_bets)} บิล)\nคืนเครดิตให้: {names}"
-                )); return
-
-            # แอดมินยกเลิกบิลฝั่งสูงทั้งหมด
-            if text.strip() in ("ยกเลิกสูง",):
-                if not is_admin(uid):
-                    safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
-                hi_bets = [b for b in st["bet_index"].values() if b["side"] == "HI"]
-                if not hi_bets:
-                    safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งสูงในรอบนี้")); return
-                with with_users_lock():
-                    for b in hi_bets:
-                        tuid = b["uid"]
-                        esc = st["escrow"].get(tuid, 0)
-                        refund = min(esc, b["amount"])
-                        if refund > 0:
-                            users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
-                            st["escrow"][tuid] = esc - refund
-                            if st["escrow"][tuid] <= 0:
-                                st["escrow"].pop(tuid, None)
-                        st["bet_index"].pop(tuid, None)
-                    st["totals"]["HI"] = 0
-                    save_users_persist()
-                names = ", ".join(b["name"] for b in hi_bets)
-                extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
-                safe_reply(event, TextSendMessage(
-                    f"✅ ยกเลิกบิลฝั่งสูงสำเร็จ{extra} ({len(hi_bets)} บิล)\nคืนเครดิตให้: {names}"
-                )); return
 
             # แอดมินยกเลิกตาม ID ลูกค้า
             if m_cancel_by_cid:

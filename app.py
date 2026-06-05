@@ -43,6 +43,23 @@ R_O_ANN_SINGLE = re.compile(
     r"^\s*o\s+(.+?)\s*([ลย])\s*(\d+)(?:\s*[-/]\s*(\d+))?\s*/\s*([\d.]+)\s*$",
     re.IGNORECASE
 )
+# รูปแบบ "ค่าย ล300/1.85 ย/ไม่มี" หรือ "ค่าย ล/ไม่มี ย300/1.85"
+R_ANN_ONESIDED = re.compile(
+    r"^\s*([^\s].+?)\s*ล\s*(\d+(?:\s*[-/]\s*\d+)?)\s*/\s*([\d.]+)\s*ย\s*/\s*(?:ไม่มี(?:ราคา)?)\s*$",
+    re.IGNORECASE
+)
+R_ANN_ONESIDED_LO = re.compile(
+    r"^\s*([^\s].+?)\s*ล\s*/\s*(?:ไม่มี(?:ราคา)?)\s*ย\s*(\d+(?:\s*[-/]\s*\d+)?)\s*/\s*([\d.]+)\s*$",
+    re.IGNORECASE
+)
+R_O_ANN_ONESIDED = re.compile(
+    r"^\s*o\s+(.+?)\s*ล\s*(\d+(?:\s*[-/]\s*\d+)?)\s*/\s*([\d.]+)\s*ย\s*/\s*(?:ไม่มี(?:ราคา)?)\s*$",
+    re.IGNORECASE
+)
+R_O_ANN_ONESIDED_LO = re.compile(
+    r"^\s*o\s+(.+?)\s*ล\s*/\s*(?:ไม่มี(?:ราคา)?)\s*ย\s*(\d+(?:\s*[-/]\s*\d+)?)\s*/\s*([\d.]+)\s*$",
+    re.IGNORECASE
+)
 R_CLEAR     = re.compile(r"^(clear|reset)\b", re.IGNORECASE)
 R_CM        = re.compile(r"^cm$", re.IGNORECASE)
 R_CALL      = re.compile(r"^call$", re.IGNORECASE)
@@ -789,6 +806,9 @@ RESULT_DEFS = {
     "ม":   {"label": "เสมอ-หาย (คืนเต็ม ไม่หัก)", "special": "DRAW_0"},
     # สส = ทั้ง 2 ฝั่งเสียหมด เจ้ามือได้
     "สส":  {"label": "สส (ทั้ง 2 ฝั่งเสียหมด)", "special": "DRAW_BOTH_LOSE"},
+    # คำสั่งย่อ sส / sต หัก 5% (rate 1.95) = ได้คืน ต้นทุน + กำไร 95%
+    "ส":   {"label": "สูงชนะ หัก 5% (จ่าย 1.95)", "special": "HI_WIN", "rate": 1.95},
+    "ต":   {"label": "ต่ำชนะ หัก 5% (จ่าย 1.95)", "special": "LO_WIN", "rate": 1.95},
 }
 def normalize_result_code(code: str) -> str:
     """
@@ -1108,6 +1128,14 @@ def _fmt_amount_range(amount_tuple):
     return fmt(amount_tuple)
 
 
+def _parse_amount_range(s: str):
+    """แปลง string เช่น '300' หรือ '300-500' เป็น tuple (min, max)"""
+    s = s.strip()
+    m = re.match(r"(\d+)\s*[-/]\s*(\d+)", s)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    return (int(s), None)
+
 def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount=None, lo_rate=None):
     """
     ประกาศราคา flex card
@@ -1122,42 +1150,66 @@ def flex_open_with_prices(pair_no, camp, hi_amount=None, hi_rate=None, lo_amount
     ]
 
     # ฝั่งสูง (ล)
-    if hi_amount is not None and hi_rate is not None:
-        hi_txt = _fmt_amount_range(hi_amount)
-        rows.append({
-            "type": "box", "layout": "horizontal",
-            "contents": [
-                {"type": "text", "text": "🟢 ไล่ (สูง)",
-                 "weight": "bold", "size": "md", "flex": 4, "color": "#16A34A"},
-                {"type": "text", "text": f"{hi_txt} วินาที",
-                 "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
-            ]
-        })
-        rows.append({
-            "type": "text",
-            "text": f"อัตราน้ำจ่าย : {hi_rate}",
-            "size": "sm", "color": "#6B7280", "margin": "xs"
-        })
+    hi_no_price = (hi_amount == "ไม่มี")
+    if hi_amount is not None:
+        if hi_no_price:
+            rows.append({
+                "type": "box", "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": "🟢 ไล่ (สูง)",
+                     "weight": "bold", "size": "md", "flex": 4, "color": "#16A34A"},
+                    {"type": "text", "text": "ไม่มีราคา",
+                     "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#9CA3AF"},
+                ]
+            })
+        else:
+            hi_txt = _fmt_amount_range(hi_amount)
+            rows.append({
+                "type": "box", "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": "🟢 ไล่ (สูง)",
+                     "weight": "bold", "size": "md", "flex": 4, "color": "#16A34A"},
+                    {"type": "text", "text": f"{hi_txt} วินาที",
+                     "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
+                ]
+            })
+            rows.append({
+                "type": "text",
+                "text": f"อัตราน้ำจ่าย : {hi_rate}",
+                "size": "sm", "color": "#6B7280", "margin": "xs"
+            })
 
     # ฝั่งต่ำ (ย)
-    if lo_amount is not None and lo_rate is not None:
+    lo_no_price = (lo_amount == "ไม่มี")
+    if lo_amount is not None:
         if hi_amount is not None:
             rows.append({"type": "separator", "margin": "sm"})
-        lo_txt = _fmt_amount_range(lo_amount)
-        rows.append({
-            "type": "box", "layout": "horizontal",
-            "contents": [
-                {"type": "text", "text": "🔴 ยั้ง (ต่ำ)",
-                 "weight": "bold", "size": "md", "flex": 4, "color": "#EF4444"},
-                {"type": "text", "text": f"{lo_txt} วินาที",
-                 "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
-            ]
-        })
-        rows.append({
-            "type": "text",
-            "text": f"อัตราน้ำจ่าย : {lo_rate}",
-            "size": "sm", "color": "#6B7280", "margin": "xs"
-        })
+        if lo_no_price:
+            rows.append({
+                "type": "box", "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": "🔴 ยั้ง (ต่ำ)",
+                     "weight": "bold", "size": "md", "flex": 4, "color": "#EF4444"},
+                    {"type": "text", "text": "ไม่มีราคา",
+                     "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#9CA3AF"},
+                ]
+            })
+        else:
+            lo_txt = _fmt_amount_range(lo_amount)
+            rows.append({
+                "type": "box", "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": "🔴 ยั้ง (ต่ำ)",
+                     "weight": "bold", "size": "md", "flex": 4, "color": "#EF4444"},
+                    {"type": "text", "text": f"{lo_txt} วินาที",
+                     "weight": "bold", "size": "md", "flex": 4, "align": "end", "color": "#111827"},
+                ]
+            })
+            rows.append({
+                "type": "text",
+                "text": f"อัตราน้ำจ่าย : {lo_rate}",
+                "size": "sm", "color": "#6B7280", "margin": "xs"
+            })
 
     rows += [
         {"type": "separator", "margin": "md"},
@@ -3396,8 +3448,10 @@ def on_message(event: MessageEvent):
         # ==== ประกาศราคาแบบ "ส่งข้อความอย่างเดียว" (ไม่เปิดรอบ) ====
         m_announce = R_ANN.match(text)
         m_announce_single = R_ANN_SINGLE.match(text)
+        m_announce_onesided = R_ANN_ONESIDED.match(text)
+        m_announce_onesided_lo = R_ANN_ONESIDED_LO.match(text)
 
-        if (m_announce or m_announce_single) and not re.match(r"^\s*o\b", text, re.IGNORECASE):
+        if (m_announce or m_announce_single or m_announce_onesided or m_announce_onesided_lo) and not re.match(r"^\s*o\b", text, re.IGNORECASE):
             if not is_admin(uid):
                 safe_reply(event, TextSendMessage("คำสั่งประกาศราคานี้ใช้ได้เฉพาะแอดมิน"))
                 return
@@ -3413,6 +3467,20 @@ def on_message(event: MessageEvent):
                 lo_rate  = m_announce.group(7)
                 hi_amount = (hi_min_, hi_max_)
                 lo_amount = (lo_min_, lo_max_)
+            elif m_announce_onesided:
+                # ล300/1.85 ย/ไม่มี
+                camp      = m_announce_onesided.group(1).strip()
+                hi_amount = _parse_amount_range(m_announce_onesided.group(2))
+                hi_rate   = m_announce_onesided.group(3)
+                lo_amount = "ไม่มี"
+                lo_rate   = None
+            elif m_announce_onesided_lo:
+                # ล/ไม่มี ย300/1.85
+                camp      = m_announce_onesided_lo.group(1).strip()
+                hi_amount = "ไม่มี"
+                hi_rate   = None
+                lo_amount = _parse_amount_range(m_announce_onesided_lo.group(2))
+                lo_rate   = m_announce_onesided_lo.group(3)
             else:
                 # กลุ่ม: 1=camp,2=side,3=amount_min,4=amount_max,5=rate
                 camp    = m_announce_single.group(1).strip()
@@ -3449,7 +3517,9 @@ def on_message(event: MessageEvent):
 
             m = R_O_ANN.match(text)
             m_single = R_O_ANN_SINGLE.match(text) if not m else None
-            if m or m_single:
+            m_onesided = R_O_ANN_ONESIDED.match(text) if not m and not m_single else None
+            m_onesided_lo = R_O_ANN_ONESIDED_LO.match(text) if not m and not m_single and not m_onesided else None
+            if m or m_single or m_onesided or m_onesided_lo:
                 if m:
                     camp     = m.group(1).strip()
                     hi_min_  = int(m.group(2))
@@ -3460,6 +3530,18 @@ def on_message(event: MessageEvent):
                     lo_rate  = m.group(7)
                     hi_amount = (hi_min_, hi_max_)
                     lo_amount = (lo_min_, lo_max_)
+                elif m_onesided:
+                    camp      = m_onesided.group(1).strip()
+                    hi_amount = _parse_amount_range(m_onesided.group(2))
+                    hi_rate   = m_onesided.group(3)
+                    lo_amount = "ไม่มี"
+                    lo_rate   = None
+                elif m_onesided_lo:
+                    camp      = m_onesided_lo.group(1).strip()
+                    hi_amount = "ไม่มี"
+                    hi_rate   = None
+                    lo_amount = _parse_amount_range(m_onesided_lo.group(2))
+                    lo_rate   = m_onesided_lo.group(3)
                 else:
                     camp    = m_single.group(1).strip()
                     side_ch = m_single.group(2).lower()
@@ -3965,6 +4047,58 @@ def on_message(event: MessageEvent):
                     save_users_persist()
                 extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
                 safe_reply(event, TextSendMessage(f"ยกเลิกบิลทั้งหมดสำเร็จ{extra} ({n} บิล)")); return
+
+            # แอดมินยกเลิกบิลฝั่งต่ำทั้งหมด
+            if text.strip() in ("ยกเลิกต่ำ",):
+                if not is_admin(uid):
+                    safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
+                lo_bets = [b for b in st["bet_index"].values() if b["side"] == "LO"]
+                if not lo_bets:
+                    safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งต่ำในรอบนี้")); return
+                with with_users_lock():
+                    for b in lo_bets:
+                        tuid = b["uid"]
+                        esc = st["escrow"].get(tuid, 0)
+                        refund = min(esc, b["amount"])
+                        if refund > 0:
+                            users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                            st["escrow"][tuid] = esc - refund
+                            if st["escrow"][tuid] <= 0:
+                                st["escrow"].pop(tuid, None)
+                        st["bet_index"].pop(tuid, None)
+                    st["totals"]["LO"] = 0
+                    save_users_persist()
+                names = ", ".join(b["name"] for b in lo_bets)
+                extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
+                safe_reply(event, TextSendMessage(
+                    f"✅ ยกเลิกบิลฝั่งต่ำสำเร็จ{extra} ({len(lo_bets)} บิล)\nคืนเครดิตให้: {names}"
+                )); return
+
+            # แอดมินยกเลิกบิลฝั่งสูงทั้งหมด
+            if text.strip() in ("ยกเลิกสูง",):
+                if not is_admin(uid):
+                    safe_reply(event, TextSendMessage("คำสั่งนี้ใช้ได้เฉพาะแอดมิน")); return
+                hi_bets = [b for b in st["bet_index"].values() if b["side"] == "HI"]
+                if not hi_bets:
+                    safe_reply(event, TextSendMessage("ไม่มีบิลฝั่งสูงในรอบนี้")); return
+                with with_users_lock():
+                    for b in hi_bets:
+                        tuid = b["uid"]
+                        esc = st["escrow"].get(tuid, 0)
+                        refund = min(esc, b["amount"])
+                        if refund > 0:
+                            users[tuid]["credit"] = users[tuid].get("credit", 0) + refund
+                            st["escrow"][tuid] = esc - refund
+                            if st["escrow"][tuid] <= 0:
+                                st["escrow"].pop(tuid, None)
+                        st["bet_index"].pop(tuid, None)
+                    st["totals"]["HI"] = 0
+                    save_users_persist()
+                names = ", ".join(b["name"] for b in hi_bets)
+                extra = " (กำลังพักรอบ)" if st["phase"] == "PAUSED" else ""
+                safe_reply(event, TextSendMessage(
+                    f"✅ ยกเลิกบิลฝั่งสูงสำเร็จ{extra} ({len(hi_bets)} บิล)\nคืนเครดิตให้: {names}"
+                )); return
 
             # แอดมินยกเลิกตาม ID ลูกค้า
             if m_cancel_by_cid:

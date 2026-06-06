@@ -336,7 +336,7 @@ def _atomic_write_json(path: str, data: dict):
 # ใช้ไฟล์ state เพื่อกันเคสที่ server มีหลาย worker แล้ว memory rooms ไม่ sync กัน
 _ADMIN_ACTION_STATE_JSON = os.path.join(DATA_DIR, "admin_action_state.json")
 _ADMIN_ACTION_LOCK_FILE = os.path.join(DATA_DIR, ".admin_action.lock")
-_ADMIN_ACTION_TTL_SEC = int(os.getenv("ADMIN_ACTION_TTL_SEC", "86400"))
+_ADMIN_ACTION_TTL_SEC = int(os.getenv("ADMIN_ACTION_TTL_SEC", str(30 * 24 * 60 * 60)))  # default 30 วัน
 _admin_action_thread_lock = threading.RLock()
 
 @contextmanager
@@ -704,7 +704,7 @@ load_rooms_state()
 # - ตอนสร้างไฟล์ backup_round_*.json จะตั้ง Timer ให้ลบไฟล์นั้นหลังครบ 24 ชั่วโมงพอดี
 # - ตอนเปิดบอท จะสแกนไฟล์ backup_round ที่ค้างอยู่ 1 ครั้ง แล้วตั้งเวลาลบตามอายุไฟล์ที่เหลือ
 # - ไม่มี worker เช็คซ้ำทุก 1 ชั่วโมง
-BACKUP_ROUND_KEEP_SEC = int(os.getenv("BACKUP_ROUND_KEEP_SEC", str(24 * 60 * 60)))
+BACKUP_ROUND_KEEP_SEC = int(os.getenv("BACKUP_ROUND_KEEP_SEC", str(30 * 24 * 60 * 60)))  # default 30 วัน
 BACKUP_ROUND_PREFIXES = ("backup_round", "backup-round")
 _backup_round_timers = {}
 _backup_round_timers_lock = threading.RLock()

@@ -494,7 +494,9 @@ def save_pending_rollback_snapshot(room_id: str, round_no: int, uid: str, st: di
     try:
         with with_users_lock():
             users_snapshot = _loads_bytes(_dumps_bytes(users))
-        room_snapshot = _loads_bytes(_dumps_bytes(st))
+        st_safe = st.copy()
+        st_safe["disabled_sides"] = list(st_safe.get("disabled_sides", set()))
+        room_snapshot = _loads_bytes(_dumps_bytes(st_safe))
         payload = {
             "round_no": int(round_no),
             "room_id": str(room_id),

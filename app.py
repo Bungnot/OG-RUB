@@ -3998,11 +3998,13 @@ def on_message(event: MessageEvent):
             try:
                 backup_path = os.path.join(DATA_DIR, f"backup_round_{st['pairNo']}.json")
                 with with_users_lock(): # [FIXED] ใช้แค่ with_users_lock()
+                    room_state_copy = st.copy()
+                    room_state_copy["disabled_sides"] = list(room_state_copy.get("disabled_sides", set()))
                     snapshot = {
                         "round": st["pairNo"],
                         "users": users,
-                        "room_state": st.copy(),   # ✅ st อยู่ใน with_rooms_lock() อยู่แล้ว
-                        "metrics": METRICS.copy(), 
+                        "room_state": room_state_copy,
+                        "metrics": METRICS.copy(),
                     }
                     _atomic_write_json(backup_path, snapshot)
 
